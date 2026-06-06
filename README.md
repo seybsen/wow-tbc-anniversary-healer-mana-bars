@@ -53,6 +53,9 @@ Healers are read from the **assigned raid role** (`UnitGroupRolesAssigned`).
 Right-click a unit frame → **Role → Healer**, or set roles in the raid panel.
 Players without the Healer role are not shown.
 
+When you're **solo** there are no raid roles, so the addon shows a single bar
+for your own mana (the overall bar) — handy with "Always show (even when solo)".
+
 ## Optional dependencies
 
 - **LibSharedMedia-3.0** — if present (e.g. provided by another addon), its

@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.3
+
+### Changed
+- Solo (ungrouped) now shows a single bar tracking your own mana instead of
+  nothing — raid roles don't exist solo, so the overall bar stands in for you.
+
+### Fixed
+- Low-mana auto-announce no longer triggers `ADDON_ACTION_BLOCKED`: **Say** and
+  **Yell** can't be sent from automated code, so those channels are skipped and
+  **Auto** announces to nobody when solo. The local warning is unaffected.
+
 ## 1.0.2
 
 ### Added

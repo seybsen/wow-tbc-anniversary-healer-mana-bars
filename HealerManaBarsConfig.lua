@@ -314,7 +314,8 @@ local function BuildPanel(p)
     MakeCheckbox(child, y, "Only the overall bar (hide individual healers)", "overallOnly")
     MakeCheckbox(child, y, "Hide dead healers (otherwise grey them out)", "hideDead")
     MakeDesc(child, y, "Healers are detected via assigned raid role (right-click a unit " ..
-        "frame → Role → Healer). Players without the Healer role are not shown.")
+        "frame → Role → Healer). Players without the Healer role are not shown. " ..
+        "When solo (no raid roles), a single bar shows your own mana.")
     MakeCheckbox(child, y, "Locked (uncheck to drag the bars)", "locked",
         function() ApplyLock() end)
 
