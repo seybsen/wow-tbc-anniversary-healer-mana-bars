@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.4
+
+### Changed
+- Clarified the in-game options text: the healer-detection help now notes that a
+  single bar tracks your own mana when solo.
+
 ## 1.0.3
 
 ### Changed

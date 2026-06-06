@@ -16,4 +16,7 @@ ignore:
   - ".gitignore"
   - ".github"
   - ".pkgmeta"
+  - ".luacheckrc"  # dev-only linter config
+  - "AGENTS.md"    # contributor docs, not shipped to players
+  - "CLAUDE.md"
   - "media"        # CurseForge listing art, not shipped in the addon
