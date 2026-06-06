@@ -42,6 +42,13 @@ local DEFAULTS = {
 
     -- ElvUI skin match
     useElvUI        = false,
+
+    -- where the bars are shown (arena/BG win over party/raid; see ShouldShowByContext)
+    showInRaid         = true,
+    showInParty        = true,
+    showInBattleground = true,
+    showInArena        = true,
+    showAlways         = false,   -- show everywhere, even solo
 }
 
 -- Seed any missing keys without clobbering the user's saved choices.
@@ -308,6 +315,16 @@ local function BuildPanel(p)
         "frame → Role → Healer). Players without the Healer role are not shown.")
     MakeCheckbox(child, y, "Locked (uncheck to drag the bars)", "locked",
         function() ApplyLock() end)
+
+    -- Visibility --------------------------------------------------------------
+    MakeHeader(child, y, "Visibility", PANEL_W)
+    MakeCheckbox(child, y, "Always show (even when solo)", "showAlways")
+    MakeCheckbox(child, y, "Show in raid", "showInRaid")
+    MakeCheckbox(child, y, "Show in party", "showInParty")
+    MakeCheckbox(child, y, "Show in battlegrounds", "showInBattleground")
+    MakeCheckbox(child, y, "Show in arenas", "showInArena")
+    MakeDesc(child, y, "\"Always show\" overrides the rest. While unlocked the bars " ..
+        "stay visible regardless, so you can position them.")
 
     -- Layout ------------------------------------------------------------------
     MakeHeader(child, y, "Layout", PANEL_W)

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.2
+
+### Added
+- **Visibility** options — show/hide per context: raid, party, battleground,
+  arena, or always (even solo). The bars still stay visible while unlocked so
+  they can be positioned.
+
 ## 1.0.1
 
 ### Added

@@ -24,8 +24,9 @@ know whether the healing core has the mana to push — or needs a breather.
   Names are always class-coloured.
 - **LibSharedMedia** aware — your shared textures and fonts show up in the lists.
 - **ElvUI** option to borrow ElvUI's texture and font so the bars blend in.
-- **Movable** — unlock to drag the cluster anywhere; it hides while you're solo
-  (unless unlocked or in test mode).
+- **Movable** — unlock to drag the cluster anywhere.
+- **Per-context visibility** — choose where the bars appear: raid, party,
+  battleground, arena, or always (even solo). Hidden by default when solo.
 - **Test mode** to tune everything solo. It even includes **your own character**
   live (real name and mana), so what you configure is what you'll see in a raid.
 

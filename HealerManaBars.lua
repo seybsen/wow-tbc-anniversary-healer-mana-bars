@@ -72,6 +72,8 @@ local CORE_FALLBACK = {
     overallColorMode = "static", overallStaticColor = { 0.20, 0.45, 0.95 },
     blink = true, lowThreshold = 30, warn = true,
     announce = false, announceChannel = "AUTO", useElvUI = false,
+    showInRaid = true, showInParty = true, showInBattleground = true,
+    showInArena = true, showAlways = false,
 }
 
 -- ─── State ───────────────────────────────────────────────────────────────────
@@ -503,14 +505,26 @@ local function RefreshValues(entries)
     end
 end
 
+-- Per-context visibility. Arenas/BGs are tested before group type because the
+-- instance also puts you in a party/raid, so the PvP options must win there.
+local function ShouldShowByContext()
+    if DB.showAlways then return true end
+    local _, instanceType = IsInInstance()
+    if instanceType == "arena" then return DB.showInArena end
+    if instanceType == "pvp"   then return DB.showInBattleground end
+    if IsInRaid()  then return DB.showInRaid end
+    if IsInGroup() then return DB.showInParty end
+    return false   -- solo, and "always" is off
+end
+
 -- ─── Rebuild (roster or config change) ───────────────────────────────────────
 local function Rebuild()
     if not g_anchor then return end
 
-    -- Stay out of the way when solo: hide unless test mode is on or the frame is
-    -- unlocked (so it can still be positioned). Hiding the anchor also hides
-    -- every child bar and suspends its OnUpdate.
-    if DB.locked and not DB.testMode and not IsInGroup() then
+    -- Test mode and an unlocked frame always show (so it can be tuned and
+    -- positioned); otherwise the per-context options decide. Hiding the anchor
+    -- also hides every child bar and suspends its OnUpdate.
+    if not (DB.testMode or not DB.locked or ShouldShowByContext()) then
         g_anchor:Hide()
         return
     end
