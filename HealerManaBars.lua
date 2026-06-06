@@ -64,7 +64,8 @@ local E = ElvUI and ElvUI[1]
 -- separate file: if it ever fails to load, this keeps the core from running
 -- with a nil DB (which would size bars to nil and blank the whole display).
 local CORE_FALLBACK = {
-    locked = false, testMode = false, showOverall = true, hideDead = false, growth = "down",
+    locked = false, testMode = false, showOverall = true, overallOnly = false,
+    hideDead = false, growth = "down",
     barW = 160, barH = 16, spacing = 2, texture = "Blizzard", scale = 1.0,
     font = "Friz Quadrata", fontSize = 11,
     opacity = 1.0, bgOpacity = 0.55,
@@ -241,10 +242,14 @@ local function BuildEntries()
     end
 
     -- Canonical top→bottom order: overall first, then the living, then corpses.
+    -- "Overall only" draws just the aggregate bar, but the healer list is still
+    -- returned separately so the overall keeps reflecting the whole group.
     local visual = {}
-    if DB.showOverall then visual[#visual + 1] = { kind = "overall" } end
-    for _, h in ipairs(healers) do if not h.dead then visual[#visual + 1] = h end end
-    for _, h in ipairs(healers) do if h.dead     then visual[#visual + 1] = h end end
+    if DB.showOverall or DB.overallOnly then visual[#visual + 1] = { kind = "overall" } end
+    if not DB.overallOnly then
+        for _, h in ipairs(healers) do if not h.dead then visual[#visual + 1] = h end end
+        for _, h in ipairs(healers) do if h.dead     then visual[#visual + 1] = h end end
+    end
 
     -- Bar index grows away from the anchor along the grow direction, so "up"
     -- builds from the bottom — reverse the visual order to keep the overall bar
@@ -252,9 +257,9 @@ local function BuildEntries()
     if DB.growth == "up" then
         local rev = {}
         for i = #visual, 1, -1 do rev[#rev + 1] = visual[i] end
-        return rev
+        return rev, healers
     end
-    return visual
+    return visual, healers
 end
 
 -- ─── Bar pool ────────────────────────────────────────────────────────────────
@@ -410,19 +415,17 @@ local function FireAnnounce()
     SendChatMessage(msg, ResolveChannel())
 end
 
-local function RefreshValues(entries)
-    -- First pass: aggregate the healers for the overall bar.
+local function RefreshValues(entries, healers)
+    -- Aggregate over every healer for the overall bar — including ones not drawn
+    -- (so "overall only" still reflects the whole group). A corpse isn't "low on
+    -- mana", just unavailable, so the dead are left out of the average.
     local sumCur, sumMax, healerCount = 0, 0, 0
-    for _, e in ipairs(entries) do
-        if e.kind == "unit" then
-            local cur, max = UnitMana(e)
-            e._cur, e._max = cur, max
-            e._dead = IsEntryDead(e)
-            -- A corpse isn't "low on mana", just unavailable — leave the dead
-            -- out of the aggregate so they don't drag the overall bar down.
-            if not e._dead and max > 0 then
-                sumCur, sumMax, healerCount = sumCur + cur, sumMax + max, healerCount + 1
-            end
+    for _, e in ipairs(healers) do
+        local cur, max = UnitMana(e)
+        e._cur, e._max = cur, max
+        e._dead = IsEntryDead(e)
+        if not e._dead and max > 0 then
+            sumCur, sumMax, healerCount = sumCur + cur, sumMax + max, healerCount + 1
         end
     end
 
@@ -531,7 +534,7 @@ local function Rebuild()
     g_anchor:Show()
     g_anchor:SetAlpha(DB.opacity or 1)   -- whole-cluster opacity
 
-    local entries = BuildEntries()
+    local entries, healers = BuildEntries()
     for _, bar in ipairs(g_bars) do bar:Hide() end
     for i in ipairs(entries) do
         local bar = AcquireBar(i)
@@ -539,8 +542,11 @@ local function Rebuild()
         bar:Show()
     end
     LayoutBars(#entries)
-    RefreshValues(entries)
-    g_anchor._entries = entries     -- handed to OnUpdate for periodic refresh
+    RefreshValues(entries, healers)
+    -- handed to OnUpdate for periodic refresh; healers can outnumber entries when
+    -- "overall only" hides the individual bars
+    g_anchor._entries = entries
+    g_anchor._healers = healers
 end
 
 -- ─── Movement: lock / position ───────────────────────────────────────────────
@@ -639,7 +645,7 @@ local function OnUpdate(_, elapsed)
 
     -- Polling (vs. UNIT_POWER/UNIT_AURA events) is trivially cheap for a handful
     -- of bars and transparently handles units passing in and out of range.
-    if g_anchor._entries then RefreshValues(g_anchor._entries) end
+    if g_anchor._entries then RefreshValues(g_anchor._entries, g_anchor._healers) end
 end
 
 -- ─── Init ────────────────────────────────────────────────────────────────────

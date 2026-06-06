@@ -6,6 +6,8 @@
 - **Visibility** options — show/hide per context: raid, party, battleground,
   arena, or always (even solo). The bars still stay visible while unlocked so
   they can be positioned.
+- **Only the overall bar** option — hide the individual healer bars and show
+  just the aggregate (still computed from the whole group).
 
 ## 1.0.1
 

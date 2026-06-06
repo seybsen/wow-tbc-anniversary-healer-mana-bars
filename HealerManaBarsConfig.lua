@@ -15,6 +15,7 @@ local DEFAULTS = {
     locked       = false,      -- start unlocked so a fresh install is easy to place
     testMode     = false,
     showOverall  = true,
+    overallOnly  = false,      -- show only the overall bar, no individual healers
     hideDead     = false,      -- hide dead healers; when off they're greyed out
     growth       = "down",     -- "down" | "up"
     barW         = 160,
@@ -310,6 +311,7 @@ local function BuildPanel(p)
     MakeHeader(child, y, "General", PANEL_W)
     MakeCheckbox(child, y, "Test mode (simulate fake healers)", "testMode")
     MakeCheckbox(child, y, "Show overall (aggregate) bar", "showOverall")
+    MakeCheckbox(child, y, "Only the overall bar (hide individual healers)", "overallOnly")
     MakeCheckbox(child, y, "Hide dead healers (otherwise grey them out)", "hideDead")
     MakeDesc(child, y, "Healers are detected via assigned raid role (right-click a unit " ..
         "frame → Role → Healer). Players without the Healer role are not shown.")
