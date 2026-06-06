@@ -9,17 +9,23 @@
 std = "lua51"
 max_line_length = false   -- the source intentionally uses long descriptive lines
 
--- Don't lint generated/duplicate trees.
+-- Don't lint generated/duplicate/vendored trees.
 exclude_files = {
     ".release/",
     "HealerManaBars/",   -- untracked packaging staging copy (byte-identical)
+    ".luarocks/",        -- luacheck's own install tree (CI + local)
+    ".lua/",             -- leafo lua-setup dir in CI
 }
 
--- Globals this addon defines (read AND written by our own files).
+-- Globals this addon defines or writes fields on. WoW tables we mutate
+-- (SlashCmdList[...], ColorPickerFrame.func, ...) must be writable, so they
+-- live here rather than in read_globals (which would flag "read-only field").
 globals = {
     "HealerManaBarsDB",
     "SLASH_HEALERMANABARS1",
     "SLASH_HEALERMANABARS2",
+    "SlashCmdList",
+    "ColorPickerFrame",
     -- Functions exported for the other file / slash command to call.
     "HealerManaBars_Rebuild",
     "HealerManaBars_ApplyLock",
@@ -47,10 +53,9 @@ read_globals = {
     -- chat / alerts
     "SendChatMessage", "DEFAULT_CHAT_FRAME", "ChatTypeInfo",
     "RaidNotice_AddMessage", "RaidWarningFrame", "PlaySound", "SOUNDKIT",
-    "SlashCmdList",
     -- options panel widgets
     "UIDropDownMenu_SetWidth", "UIDropDownMenu_Initialize",
     "UIDropDownMenu_CreateInfo", "UIDropDownMenu_AddButton", "UIDropDownMenu_SetText",
-    "ColorPickerFrame", "Settings",
+    "Settings",
     "InterfaceOptions_AddCategory", "InterfaceOptionsFrame_OpenToCategory",
 }

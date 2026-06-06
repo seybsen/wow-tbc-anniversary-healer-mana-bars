@@ -6,6 +6,8 @@
 .luacheckrc.local
 luacov.stats.out
 luacov.report.out
+.luarocks/        # local luacheck install tree
+.lua/             # leafo lua-setup dir
 
 # Editor / IDE
 .vscode/
