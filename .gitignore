@@ -1,0 +1,22 @@
+# Packager output
+/.release/
+*.zip
+
+# Lua tooling
+.luacheckrc.local
+luacov.stats.out
+luacov.report.out
+
+# Editor / IDE
+.vscode/
+.idea/
+*.code-workspace
+*~
+*.bak
+*.swp
+*.tmp
+
+# OS cruft
+.DS_Store
+Thumbs.db
+desktop.ini

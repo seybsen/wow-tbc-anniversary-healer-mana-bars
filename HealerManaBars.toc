@@ -1,0 +1,15 @@
+## Interface: 20505
+## Title: |cff66ccffHealer Mana Bars|r
+## Notes: Individual + overall mana bars for raid healers, with regen/drinking indicators and low-mana alerts. /hmb
+## Author: Seybsen
+## Version: 1.0.0
+## SavedVariables: HealerManaBarsDB
+## IconTexture: Interface\Icons\Spell_Holy_PowerInfusion
+## OptionalDeps: LibSharedMedia-3.0, ElvUI
+## X-Category: Raid Frames
+# After creating the CurseForge project, uncomment and set its numeric ID so the
+# release workflow can upload there:
+# ## X-Curse-Project-ID: 000000
+
+HealerManaBarsConfig.lua
+HealerManaBars.lua

@@ -1,0 +1,18 @@
+# BigWigsMods packager config (CurseForge / WoWInterface / GitHub releases).
+# https://github.com/BigWigsMods/packager
+
+package-as: HealerManaBars
+
+# This addon bundles no embedded libraries (LibSharedMedia/ElvUI are optional
+# and provided by the user's other addons), so the no-lib zip is unnecessary.
+enable-nolib-creation: no
+
+# Use the hand-written changelog rather than an auto-generated commit list.
+manual-changelog: CHANGELOG.md
+
+# Keep development-only files out of the packaged zip.
+ignore:
+  - ".git"
+  - ".gitignore"
+  - ".github"
+  - ".pkgmeta"
