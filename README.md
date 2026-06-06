@@ -46,9 +46,7 @@ Open the options with **`/hmb`** (or via *Interface → AddOns → Healer Mana B
 
 Healers are read from the **assigned raid role** (`UnitGroupRolesAssigned`).
 Right-click a unit frame → **Role → Healer**, or set roles in the raid panel.
-Players without the Healer role are not shown — this is deliberate: guessing from
-class would need talent data the API doesn't expose and would mislabel DPS
-shaman/priest/paladin/druid as healers.
+Players without the Healer role are not shown.
 
 ## Optional dependencies
 

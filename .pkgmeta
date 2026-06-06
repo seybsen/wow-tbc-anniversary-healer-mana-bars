@@ -16,3 +16,4 @@ ignore:
   - ".gitignore"
   - ".github"
   - ".pkgmeta"
+  - "media"        # CurseForge listing art, not shipped in the addon
