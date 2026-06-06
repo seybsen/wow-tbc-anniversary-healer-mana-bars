@@ -67,6 +67,7 @@ local CORE_FALLBACK = {
     locked = false, testMode = false, showOverall = true, hideDead = false, growth = "down",
     barW = 160, barH = 16, spacing = 2, texture = "Blizzard", scale = 1.0,
     font = "Friz Quadrata", fontSize = 11,
+    opacity = 1.0, bgOpacity = 0.55,
     healerColorMode = "class",   healerStaticColor  = { 0.20, 0.80, 0.20 },
     overallColorMode = "static", overallStaticColor = { 0.20, 0.45, 0.95 },
     blink = true, lowThreshold = 30, warn = true,
@@ -302,7 +303,7 @@ local function StyleBar(bar)
     -- Reuse the bar texture (darkened) as the background so the empty portion
     -- matches the fill instead of being a flat block.
     bar.bg:SetTexture(CurrentTexture())
-    bar.bg:SetVertexColor(0, 0, 0, 0.55)
+    bar.bg:SetVertexColor(0, 0, 0, DB.bgOpacity or 0.55)
     ApplyFont(bar.label)
     ApplyFont(bar.value)
     local isz = math.max(8, DB.barH - 4)
@@ -514,6 +515,7 @@ local function Rebuild()
         return
     end
     g_anchor:Show()
+    g_anchor:SetAlpha(DB.opacity or 1)   -- whole-cluster opacity
 
     local entries = BuildEntries()
     for _, bar in ipairs(g_bars) do bar:Hide() end

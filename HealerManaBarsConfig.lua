@@ -24,6 +24,8 @@ local DEFAULTS = {
     font         = "Friz Quadrata",
     fontSize     = 11,
     scale        = 1.0,
+    opacity      = 1.0,        -- whole-cluster opacity
+    bgOpacity    = 0.55,       -- bar background (empty track) opacity
 
     -- colouring
     healerColorMode    = "class",            -- "class" | "static" | "gradient"
@@ -157,7 +159,10 @@ local function MakeRadioGroup(parent, yRef, options, currentKey, onSelect)
 end
 
 local g_sliderN = 0
-local function MakeSlider(parent, yRef, label, dbKey, minV, maxV, step, onChange)
+-- fmt(value) optionally formats the readout (e.g. as a percentage); defaults to
+-- the raw number for integer sliders like width/height.
+local function MakeSlider(parent, yRef, label, dbKey, minV, maxV, step, onChange, fmt)
+    local function disp(v) return fmt and fmt(v) or tostring(v) end
     MakeLabel(parent, yRef, label)
 
     g_sliderN = g_sliderN + 1
@@ -178,12 +183,12 @@ local function MakeSlider(parent, yRef, label, dbKey, minV, maxV, step, onChange
 
     local val = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     val:SetPoint("LEFT", s, "RIGHT", 10, 0)
-    val:SetText(tostring(HealerManaBarsDB[dbKey] or minV))
+    val:SetText(disp(HealerManaBarsDB[dbKey] or minV))
 
     s:SetScript("OnValueChanged", function(_, v)
         v = math.floor(v / step + 0.5) * step   -- snap to the step
         HealerManaBarsDB[dbKey] = v
-        val:SetText(tostring(v))
+        val:SetText(disp(v))
         if onChange then onChange(v) end
         Rebuild()
     end)
@@ -319,6 +324,9 @@ local function BuildPanel(p)
     MakeMediaDropdown(child, y, "Bar texture", "HealerManaBarsTextureDD", "texture", HealerManaBars_TextureList)
     MakeMediaDropdown(child, y, "Font", "HealerManaBarsFontDD", "font", HealerManaBars_FontList)
     MakeSlider(child, y, "Font size", "fontSize", 6, 24, 1)
+    local pct = function(v) return string.format("%d%%", v * 100 + 0.5) end
+    MakeSlider(child, y, "Overall opacity",    "opacity",   0.2, 1.0, 0.05, nil, pct)
+    MakeSlider(child, y, "Background opacity", "bgOpacity", 0.0, 1.0, 0.05, nil, pct)
     if E then
         MakeCheckbox(child, y, "Use ElvUI texture + font (overrides texture & font above)", "useElvUI")
     else

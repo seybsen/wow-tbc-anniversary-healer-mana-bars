@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.1
+
+### Added
+- **Overall opacity** and **Background opacity** sliders (Layout section) — fade
+  the whole cluster and/or the empty bar track independently.
+
 ## 1.0.0
 
 First public release.
