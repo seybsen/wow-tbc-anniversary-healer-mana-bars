@@ -10,23 +10,27 @@ know whether the healing core has the mana to push — or needs a breather.
 ## Features
 
 - **Per-healer + overall bars.** Healers are detected by their assigned raid role.
+  Or show **just the overall bar** when you only want the raid-wide picture.
 - **Regen & drinking indicators.** A small icon appears next to a healer who is
   under **Innervate** or **Mana Tide Totem**, or who is **drinking**.
 - **Low-mana alerts.** When the overall healer mana drops below a configurable
   threshold you can:
   - blink the overall bar red,
   - get a local raid-warning banner + sound (only you), and/or
-  - announce `Healer mana below X%` to Say / Party / Raid / Yell / Raid Warning.
-- **Dead healers** can be hidden or greyed out, and are kept out of the overall
-  average either way.
+  - announce `Healer mana below X%` to Party / Raid / Raid Warning. (Say and
+    Yell are blocked for automated messages by the client, so the auto-alert
+    can't use them.)
+- **Dead healers** can be hidden, or greyed out and sunk to the bottom — and are
+  kept out of the overall average either way.
 - **Fully configurable look.** Bar colour (class / static / green→red gradient),
-  width, height, spacing, grow direction (up/down), bar texture and font.
-  Names are always class-coloured.
+  width, height, spacing, grow direction (up/down), bar texture, font & size, and
+  overall / background opacity. Names are always class-coloured.
 - **LibSharedMedia** aware — your shared textures and fonts show up in the lists.
 - **ElvUI** option to borrow ElvUI's texture and font so the bars blend in.
 - **Movable** — unlock to drag the cluster anywhere.
 - **Per-context visibility** — choose where the bars appear: raid, party,
-  battleground, arena, or always (even solo). Hidden by default when solo.
+  battleground, arena, or always (even solo). Hidden by default when solo;
+  when shown solo it collapses to a single bar tracking your own mana.
 - **Test mode** to tune everything solo. It even includes **your own character**
   live (real name and mana), so what you configure is what you'll see in a raid.
 

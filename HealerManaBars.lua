@@ -188,6 +188,8 @@ end
 -- Detection is purely the assigned raid role. Guessing from class is unreliable
 -- (a shadow priest is not a healer) and would need talent data we don't have.
 local function IsHealer(unit)
+    -- Solo: no assigned raid roles exist, so show your own mana regardless.
+    if not IsInGroup() then return unit == "player" end
     return UnitGroupRolesAssigned and UnitGroupRolesAssigned(unit) == "HEALER"
 end
 
@@ -244,9 +246,13 @@ local function BuildEntries()
     -- Canonical top→bottom order: overall first, then the living, then corpses.
     -- "Overall only" draws just the aggregate bar, but the healer list is still
     -- returned separately so the overall keeps reflecting the whole group.
+    -- Solo (not grouped, outside test mode): the only healer is you, so the
+    -- overall and individual bars would be identical. Show just the overall,
+    -- forcing it on even if "show overall" is off.
+    local soloSelf = not DB.testMode and not IsInGroup()
     local visual = {}
-    if DB.showOverall or DB.overallOnly then visual[#visual + 1] = { kind = "overall" } end
-    if not DB.overallOnly then
+    if DB.showOverall or DB.overallOnly or soloSelf then visual[#visual + 1] = { kind = "overall" } end
+    if not DB.overallOnly and not soloSelf then
         for _, h in ipairs(healers) do if not h.dead then visual[#visual + 1] = h end end
         for _, h in ipairs(healers) do if h.dead     then visual[#visual + 1] = h end end
     end
@@ -393,12 +399,18 @@ local function FireLocalAlert()
     end
 end
 
+-- SAY and YELL can only be sent from a hardware event (key/click); our
+-- threshold alert runs from the update timer, so Blizzard blocks them with
+-- ADDON_ACTION_BLOCKED. PARTY/RAID/RAID_WARNING are allowed from automated code.
+local PROTECTED_CHANNELS = { SAY = true, YELL = true }
+
+-- Returns the channel to announce on, or nil when there is nobody to tell.
 local function ResolveChannel()
     local c = DB.announceChannel or "AUTO"
     if c == "AUTO" then
         if IsInRaid() then return "RAID"
         elseif IsInGroup() then return "PARTY"
-        else return "SAY" end
+        else return nil end   -- solo: no group channel, so don't announce
     end
     return c
 end
@@ -407,12 +419,17 @@ end
 -- instead of sending, so tuning the addon solo never spams a public channel.
 local function FireAnnounce()
     if not DB.announce then return end
+    local channel = ResolveChannel()
     local msg = "Healer mana below " .. (DB.lowThreshold or 30) .. "%"
     if DB.testMode then
-        DEFAULT_CHAT_FRAME:AddMessage("|cff66ccffHealerManaBars|r [test → " .. ResolveChannel() .. "]: " .. msg)
+        DEFAULT_CHAT_FRAME:AddMessage("|cff66ccffHealerManaBars|r [test → " .. (channel or "—") .. "]: " .. msg)
         return
     end
-    SendChatMessage(msg, ResolveChannel())
+    -- No channel (solo) or a hardware-event-only channel (Say/Yell) can't be
+    -- auto-sent from the timer — skip rather than trip ADDON_ACTION_BLOCKED.
+    -- The local raid-warning alert still fires for the player if enabled.
+    if not channel or PROTECTED_CHANNELS[channel] then return end
+    SendChatMessage(msg, channel)
 end
 
 local function RefreshValues(entries, healers)
