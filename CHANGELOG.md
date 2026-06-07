@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.5
+
+### Changed
+- Now published on **WoWInterface** and **Wago.io** in addition to CurseForge
+  and GitHub. No in-game changes.
+
 ## 1.0.4
 
 ### Changed
