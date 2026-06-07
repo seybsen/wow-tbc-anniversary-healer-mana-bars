@@ -11,12 +11,16 @@ enable-nolib-creation: no
 manual-changelog: CHANGELOG.md
 
 # Keep development-only files out of the packaged zip.
+# (media/ holds the CurseForge listing art and must not ship inside the addon.
+#  NOTE: keep these as full-line comments — the packager does NOT strip inline
+#  comments from list items and eval's the patterns, so a trailing "# ..." breaks
+#  the file copy and produces an empty zip.)
 ignore:
   - ".git"
   - ".gitignore"
   - ".github"
   - ".pkgmeta"
-  - ".luacheckrc"  # dev-only linter config
-  - "AGENTS.md"    # contributor docs, not shipped to players
+  - ".luacheckrc"
+  - "AGENTS.md"
   - "CLAUDE.md"
-  - "media"        # CurseForge listing art, not shipped in the addon
+  - "media"

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.7
+
+### Fixed
+- Release packages were **empty through 1.0.6**: inline `# ...` comments on
+  `.pkgmeta` ignore entries broke the packager's file copy (it does not strip
+  inline comments and `eval`s the patterns). Moved all notes to full-line
+  comments — this is the first build that actually ships the addon files.
+
 ## 1.0.6
 
 ### Fixed
