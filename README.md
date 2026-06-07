@@ -1,3 +1,5 @@
+![banner](media/banner.png)
+
 # Healer Mana Bars
 
 Lightweight mana bars for your raid healers, for **WoW Classic Anniversary (TBC 2.5.x)**.
