@@ -15,7 +15,7 @@ making changes.
 > | If you change… | Update |
 > |---|---|
 > | A user-visible behaviour/feature | `README.md` (features, detection, usage) and this `AGENTS.md` |
-> | A setting/default | `DEFAULTS` (config) **and** `CORE_FALLBACK` (runtime), the panel widget + its `MakeDesc` text, `README.md`, this file |
+> | A setting/default | `DEFAULTS` (runtime — single source), the panel widget + its `MakeDesc` text, `README.md`, this file |
 > | A slash command | `README.md` command table **and** the `/hmb help` text in `HealerManaBars.lua` |
 > | Anything user-facing, for a release | add a `## X.Y.Z` section to `CHANGELOG.md` and bump `## Version` in the `.toc` (see Release process) |
 > | Architecture / flow / API gotchas | this `AGENTS.md` |
@@ -44,8 +44,8 @@ regen/drinking indicators and configurable low-mana alerts.
 | File | Role |
 |---|---|
 | `HealerManaBars.toc` | Load manifest. `## Version` lives here — bump on release. Loads config **before** runtime. |
-| `HealerManaBarsConfig.lua` | Saved-var **defaults** (`DEFAULTS`), `HealerManaBars_EnsureDefaults`, and the **options panel** (Interface → AddOns). Loaded first. |
-| `HealerManaBars.lua` | Runtime: roster → bars, value refresh, alerts, slash command, events. |
+| `HealerManaBarsConfig.lua` | The **options panel** (Interface → AddOns). Loaded first; runs at panel-open time. |
+| `HealerManaBars.lua` | Runtime: saved-var **defaults** (`DEFAULTS` + `ns.EnsureDefaults`), roster → bars, value refresh, alerts, slash command, events. |
 | `CHANGELOG.md` | Hand-written, shipped in releases (`manual-changelog` in `.pkgmeta`). Keep in sync with `## Version`. |
 | `.pkgmeta` | BigWigsMods packager config (what to ship/ignore). |
 | `.luacheckrc` | luacheck (linter) config: declares the WoW API globals so only real issues are reported. |
@@ -61,13 +61,16 @@ regen/drinking indicators and configurable low-mana alerts.
 
 ## Architecture & data flow
 
-The two files communicate through a small set of globals:
+The two files share the **private addon table** (`local _, ns = ...`, passed to
+every file of the addon), not the global namespace. The only global the addon
+defines is the saved variable `HealerManaBarsDB`. Via `ns`:
 
-- Config → core: `HealerManaBars_EnsureDefaults()`, the `HealerManaBarsDB` table.
-- Core → config: hooks `HealerManaBars_Rebuild`, `HealerManaBars_ApplyLock`,
-  `HealerManaBars_ApplyPosition`, and media helpers
-  `HealerManaBars_TextureList/Path`, `HealerManaBars_FontList/Path`.
-- `HealerManaBars_OpenConfig()` is called by `/hmb`.
+- Runtime → panel: `ns.EnsureDefaults`, `ns.DEFAULTS`, the live-apply hooks
+  `ns.Rebuild`, `ns.ApplyLock`, `ns.ApplyPosition`, and media helpers
+  `ns.TextureList/Path`, `ns.FontList/Path`.
+- Panel → runtime: `ns.OpenConfig` (called by `/hmb`).
+- All cross-file calls run at *runtime* (login / panel-open), so the second-
+  loaded file's `ns.*` are always set by then regardless of `.toc` load order.
 
 Runtime loop:
 
@@ -101,12 +104,18 @@ OnUpdate (every frame):
   exist solo) and the display collapses to just the overall bar.
 - **Polling, not events**, for values — trivial cost for a handful of bars and
   it transparently handles units going in/out of range.
+- **Regen/drink auras matched by spell ID, not name.** `REGEN_SPELL_IDS` /
+  `DRINK_SPELL_IDS` are resolved to the client-locale name at login
+  (`BuildAuraNameSets` via `GetSpellInfo`), so detection works on non-English
+  clients. Ranks share a name, so one ID per spell covers all ranks. Add new
+  indicators by spell ID, never by a hard-coded English string.
 - **No bundled libraries.** LibSharedMedia-3.0 and ElvUI are *optional* and read
   if another addon provides them (`LibStub`, `ElvUI[1]`). Built-in texture/font
   fallbacks exist. Do not embed libs; `.pkgmeta` has `enable-nolib-creation: no`.
-- **`CORE_FALLBACK`** in the runtime backstops every DB key the core touches, in
-  case the config file fails to load. Keep it in sync with `DEFAULTS` when you
-  add a setting.
+- **`DEFAULTS` is the single source of truth** for saved-var defaults and lives
+  in the **runtime** (not the panel), so the DB is fully seeded even if the panel
+  file fails to load. `ns.EnsureDefaults` fills missing keys (and migrates the
+  pre-1.0 `blinkThreshold`). There is no second fallback copy to keep in sync.
 
 ## WoW API gotchas (important — these caused real bugs)
 
@@ -123,8 +132,8 @@ OnUpdate (every frame):
 - **Slider/dropdown sub-widgets** (Low/High labels) aren't exposed as parentKeys
   on every build — fall back to `_G[name.."Low"]`. Same defensive pattern for
   radio button text.
-- Adding a setting touches up to **four** places: `DEFAULTS` (config),
-  `CORE_FALLBACK` (runtime), a widget in `BuildPanel`, and the consuming logic.
+- Adding a setting touches **three** places: `DEFAULTS` (runtime), a widget in
+  `BuildPanel`, and the consuming logic.
 
 ## Testing (no automated harness — it's in-client)
 
@@ -151,8 +160,10 @@ luacheck .
 
 The config declares the WoW API globals the addon uses, so undefined-global
 warnings mean a **real typo** — fix them, don't silence them. When you call a
-new WoW API, add it to `read_globals` in `.luacheckrc`; when you add a new
-`HealerManaBars_*` export or saved-var global, add it to `globals`.
+new WoW API, add it to `read_globals` in `.luacheckrc`. Cross-file exports go
+through the private `ns` table, not globals, so they need no `.luacheckrc` entry;
+only add to `globals` when you introduce a genuinely new `_G` name (e.g. a new
+saved variable or slash binding).
 
 ## Release process
 
@@ -184,7 +195,7 @@ skipped, so the env vars are safe to leave in place.
 | Store | Secret | TOC field | Status |
 |---|---|---|---|
 | CurseForge | `CF_API_KEY` | `## X-Curse-Project-ID: 1566721` | live |
-| WoWInterface | `WOWI_API_TOKEN` | `## X-WoWI-ID: 27153` | wired (needs secret) |
+| WoWInterface | `WOWI_API_TOKEN` | `## X-WoWI-ID: 27154` | wired (needs secret) |
 | Wago.io | `WAGO_API_TOKEN` | `## X-Wago-ID: XKqAVbKy` | wired (needs secret) |
 | GitHub Releases | `GITHUB_TOKEN` (auto) | — | live |
 

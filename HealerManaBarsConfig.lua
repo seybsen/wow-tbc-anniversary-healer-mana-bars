@@ -1,87 +1,19 @@
 -- ============================================================================
--- Healer Mana Bars — options panel & saved-variable defaults
+-- Healer Mana Bars — options panel
 -- ----------------------------------------------------------------------------
--- The .toc loads this file *before* the runtime, so the defaults below (and
--- HealerManaBars_EnsureDefaults) exist by the time the core initialises. The
--- panel registers into Interface → AddOns and edits HealerManaBarsDB live,
--- calling the HealerManaBars_* hooks the core exposes to apply changes.
+-- Builds the options panel (Interface → AddOns) and edits HealerManaBarsDB
+-- live, calling the ns.* hooks the runtime exposes to apply changes. The
+-- saved-variable defaults and ns.EnsureDefaults live in the runtime
+-- (HealerManaBars.lua) so the DB is seeded even if this panel ever fails to
+-- load; everything here runs at panel-open time, after the runtime is loaded.
 -- ============================================================================
 
-local ADDON_NAME = "HealerManaBars"
-
--- ─── Default configuration ──────────────────────────────────────────────────
-local DEFAULTS = {
-    pos          = nil,        -- {point, x, y}; nil = top-left corner
-    locked       = false,      -- start unlocked so a fresh install is easy to place
-    testMode     = false,
-    showOverall  = true,
-    overallOnly  = false,      -- show only the overall bar, no individual healers
-    hideDead     = false,      -- hide dead healers; when off they're greyed out
-    growth       = "down",     -- "down" | "up"
-    barW         = 160,
-    barH         = 16,
-    spacing      = 2,
-    texture      = "Blizzard",
-    font         = "Friz Quadrata",
-    fontSize     = 11,
-    scale        = 1.0,
-    opacity      = 1.0,        -- whole-cluster opacity
-    bgOpacity    = 0.55,       -- bar background (empty track) opacity
-
-    -- colouring
-    healerColorMode    = "class",            -- "class" | "static" | "gradient"
-    healerStaticColor  = { 0.20, 0.80, 0.20 },
-    overallColorMode   = "static",           -- "static" | "gradient"
-    overallStaticColor = { 0.20, 0.45, 0.95 },
-
-    -- low-mana alerts
-    blink           = true,
-    lowThreshold    = 30,                     -- percent
-    warn            = true,                   -- local raid-warning text + sound
-    announce        = false,                  -- broadcast to a chat channel
-    announceChannel = "AUTO",                 -- AUTO|SAY|PARTY|RAID|YELL|RAID_WARNING
-
-    -- ElvUI skin match
-    useElvUI        = false,
-
-    -- where the bars are shown (arena/BG win over party/raid; see ShouldShowByContext)
-    showInRaid         = true,
-    showInParty        = true,
-    showInBattleground = true,
-    showInArena        = true,
-    showAlways         = false,   -- show everywhere, even solo
-}
-
--- Seed any missing keys without clobbering the user's saved choices.
-function HealerManaBars_EnsureDefaults()
-    HealerManaBarsDB = HealerManaBarsDB or {}
-    local db = HealerManaBarsDB
-
-    -- Migrate the pre-1.0 key name before filling defaults.
-    if db.lowThreshold == nil and db.blinkThreshold ~= nil then
-        db.lowThreshold = db.blinkThreshold
-    end
-    db.blinkThreshold = nil
-
-    for k, v in pairs(DEFAULTS) do
-        if db[k] == nil then
-            -- Copy table defaults (colours) so editing the live value can't
-            -- mutate the shared DEFAULTS template.
-            if type(v) == "table" then
-                local t = {}
-                for i, x in ipairs(v) do t[i] = x end
-                db[k] = t
-            else
-                db[k] = v
-            end
-        end
-    end
-end
+local ADDON_NAME, ns = ...
 
 -- ─── Convenience ────────────────────────────────────────────────────────────
 local E = ElvUI and ElvUI[1]
-local function Rebuild()   if HealerManaBars_Rebuild   then HealerManaBars_Rebuild()   end end
-local function ApplyLock() if HealerManaBars_ApplyLock then HealerManaBars_ApplyLock() end end
+local function Rebuild()   if ns.Rebuild   then ns.Rebuild()   end end
+local function ApplyLock() if ns.ApplyLock then ns.ApplyLock() end end
 
 -- ═════════════════════════════════════════════════════════════════════════════
 -- OPTIONS PANEL
@@ -284,7 +216,7 @@ local function BuildPanel(p)
     p._built = true
     -- The panel can be opened before our PLAYER_LOGIN handler runs, so make sure
     -- the DB is seeded before any widget reads it.
-    HealerManaBars_EnsureDefaults()
+    ns.EnsureDefaults()
 
     local PANEL_W = 480
     local version = (C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata)(ADDON_NAME, "Version") or "dev"
@@ -341,8 +273,8 @@ local function BuildPanel(p)
     MakeSlider(child, y, "Bar width",  "barW",    60, 400, 1)
     MakeSlider(child, y, "Bar height", "barH",     8,  40, 1)
     MakeSlider(child, y, "Spacing",    "spacing",  0,  20, 1)
-    MakeMediaDropdown(child, y, "Bar texture", "HealerManaBarsTextureDD", "texture", HealerManaBars_TextureList)
-    MakeMediaDropdown(child, y, "Font", "HealerManaBarsFontDD", "font", HealerManaBars_FontList)
+    MakeMediaDropdown(child, y, "Bar texture", "HealerManaBarsTextureDD", "texture", ns.TextureList)
+    MakeMediaDropdown(child, y, "Font", "HealerManaBarsFontDD", "font", ns.FontList)
     MakeSlider(child, y, "Font size", "fontSize", 6, 24, 1)
     local pct = function(v) return string.format("%d%%", v * 100 + 0.5) end
     MakeSlider(child, y, "Overall opacity",    "opacity",   0.2, 1.0, 0.05, nil, pct)
@@ -417,11 +349,11 @@ end
 local reg = CreateFrame("Frame")
 reg:RegisterEvent("PLAYER_LOGIN")
 reg:SetScript("OnEvent", function()
-    HealerManaBars_EnsureDefaults()
+    ns.EnsureDefaults()
     RegisterPanel()
 end)
 
-function HealerManaBars_OpenConfig()
+function ns.OpenConfig()
     if Settings and Settings.OpenToCategory and panel._category then
         Settings.OpenToCategory(panel._category:GetID())
     elseif InterfaceOptionsFrame_OpenToCategory then

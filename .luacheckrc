@@ -20,22 +20,15 @@ exclude_files = {
 -- Globals this addon defines or writes fields on. WoW tables we mutate
 -- (SlashCmdList[...], ColorPickerFrame.func, ...) must be writable, so they
 -- live here rather than in read_globals (which would flag "read-only field").
+-- The two files now share state through the private addon table (`local _, ns =
+-- ...`), not the global namespace, so the only global the addon defines is the
+-- saved variable plus the slash bindings / WoW tables it writes fields on.
 globals = {
     "HealerManaBarsDB",
     "SLASH_HEALERMANABARS1",
     "SLASH_HEALERMANABARS2",
     "SlashCmdList",
     "ColorPickerFrame",
-    -- Functions exported for the other file / slash command to call.
-    "HealerManaBars_Rebuild",
-    "HealerManaBars_ApplyLock",
-    "HealerManaBars_ApplyPosition",
-    "HealerManaBars_TexturePath",
-    "HealerManaBars_TextureList",
-    "HealerManaBars_FontPath",
-    "HealerManaBars_FontList",
-    "HealerManaBars_EnsureDefaults",
-    "HealerManaBars_OpenConfig",
 }
 
 -- WoW API + UI globals the addon reads (not reassigned). Add new entries here
@@ -50,6 +43,7 @@ read_globals = {
     "UnitClass", "UnitName", "UnitExists", "UnitIsConnected", "UnitIsDeadOrGhost",
     "UnitGroupRolesAssigned", "UnitPower", "UnitPowerMax", "UnitBuff",
     "IsInRaid", "IsInGroup", "GetNumGroupMembers", "IsInInstance",
+    "GetSpellInfo",
     -- chat / alerts
     "SendChatMessage", "DEFAULT_CHAT_FRAME", "ChatTypeInfo",
     "RaidNotice_AddMessage", "RaidWarningFrame", "PlaySound", "SOUNDKIT",

@@ -13,7 +13,7 @@
 -- Slash: /hmb   (see /hmb help)
 -- ============================================================================
 
-local addonName = "HealerManaBars"
+local addonName, ns = ...
 local VERSION = (C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata)(addonName, "Version") or "dev"
 
 -- ─── Constants ───────────────────────────────────────────────────────────────
@@ -22,21 +22,40 @@ local VERSION = (C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata)(add
 -- druid shifted into cat/bear still reports real mana here.
 local MANA = (Enum and Enum.PowerType and Enum.PowerType.Mana) or 0
 
--- Auras (matched by name) that mark a temporary mana-regen effect. Mana Spring
--- Totem is intentionally absent: in TBC it pulses mana without applying any
--- player aura, so there is nothing to detect. Mana Tide and Innervate do.
-local REGEN_AURAS = {
-    ["Innervate"]         = true,
-    ["Mana Tide"]         = true,
-    ["Mana Tide Totem"]   = true,
-    ["Mana Spring"]       = true,   -- listed in case a build ever surfaces it
-    ["Mana Spring Totem"] = true,
-    ["Shadowfiend"]       = true,
+local GetSpellInfo = GetSpellInfo
+
+-- Auras that mark a temporary mana-regen effect / the drinking state, keyed by
+-- spell ID so detection is locale-proof. (The old hard-coded name table only
+-- matched an English client — regen/drink icons silently never showed on de/fr/
+-- etc.) Names are resolved to the player's locale at login via GetSpellInfo and
+-- cached in REGEN_AURAS/DRINK_AURAS; ranks share a name, so one ID per spell
+-- covers every rank, and an ID absent on this client just resolves to nil.
+-- Mana Spring Totem / Shadowfiend are best-effort: in TBC they typically apply
+-- no scannable player aura, but cost nothing to list.
+local REGEN_SPELL_IDS = {
+    29166,   -- Innervate (Druid)
+    16190,   -- Mana Tide Totem (Shaman) — all ranks share the name
+    5675,    -- Mana Spring Totem (best-effort)
+    34433,   -- Shadowfiend (best-effort)
 }
-local DRINK_AURAS = {
-    ["Drink"]       = true,
-    ["Refreshment"] = true,
+local DRINK_SPELL_IDS = {
+    430,     -- Drink (rank 1) — all ranks share the name "Drink"
+    22734,   -- Drink (higher rank, for clients lacking the rank-1 entry)
 }
+
+-- Locale-resolved name sets, filled by BuildAuraNameSets() at login.
+local REGEN_AURAS, DRINK_AURAS = {}, {}
+local function BuildAuraNameSets()
+    wipe(REGEN_AURAS); wipe(DRINK_AURAS)
+    if not GetSpellInfo then return end   -- no resolver → indicators just stay off
+
+    for _, id in ipairs(REGEN_SPELL_IDS) do
+        local n = GetSpellInfo(id); if n then REGEN_AURAS[n] = true end
+    end
+    for _, id in ipairs(DRINK_SPELL_IDS) do
+        local n = GetSpellInfo(id); if n then DRINK_AURAS[n] = true end
+    end
+end
 
 -- Media that always ships with the client. When LibSharedMedia-3.0 is present
 -- we defer to its (much larger) registry instead, so the dropdowns match what
@@ -60,22 +79,52 @@ local CLASS_COLORS = RAID_CLASS_COLORS or {}
 -- ElvUI engine handle, if the user runs ElvUI (drives the optional skin match).
 local E = ElvUI and ElvUI[1]
 
--- Last-resort defaults. The config file normally seeds every key, but it is a
--- separate file: if it ever fails to load, this keeps the core from running
--- with a nil DB (which would size bars to nil and blank the whole display).
-local CORE_FALLBACK = {
-    locked = false, testMode = false, showOverall = true, overallOnly = false,
-    hideDead = false, growth = "down",
-    barW = 160, barH = 16, spacing = 2, texture = "Blizzard", scale = 1.0,
-    font = "Friz Quadrata", fontSize = 11,
-    opacity = 1.0, bgOpacity = 0.55,
-    healerColorMode = "class",   healerStaticColor  = { 0.20, 0.80, 0.20 },
-    overallColorMode = "static", overallStaticColor = { 0.20, 0.45, 0.95 },
-    blink = true, lowThreshold = 30, warn = true,
-    announce = false, announceChannel = "AUTO", useElvUI = false,
-    showInRaid = true, showInParty = true, showInBattleground = true,
-    showInArena = true, showAlways = false,
+-- The single source of truth for saved-variable defaults. It lives in the
+-- runtime (not the options panel) so the bars still get a fully-seeded DB even
+-- if the panel file ever fails to load. Seeded by ns.EnsureDefaults (below);
+-- also exposed as ns.DEFAULTS. Add a new setting here and nowhere else.
+local DEFAULTS = {
+    pos          = nil,        -- {point, x, y}; nil = top-left corner
+    locked       = false,      -- start unlocked so a fresh install is easy to place
+    testMode     = false,
+    showOverall  = true,
+    overallOnly  = false,      -- show only the overall bar, no individual healers
+    hideDead     = false,      -- hide dead healers; when off they're greyed out
+    growth       = "down",     -- "down" | "up"
+    barW         = 160,
+    barH         = 16,
+    spacing      = 2,
+    texture      = "Blizzard",
+    font         = "Friz Quadrata",
+    fontSize     = 11,
+    scale        = 1.0,
+    opacity      = 1.0,        -- whole-cluster opacity
+    bgOpacity    = 0.55,       -- bar background (empty track) opacity
+
+    -- colouring
+    healerColorMode    = "class",            -- "class" | "static" | "gradient"
+    healerStaticColor  = { 0.20, 0.80, 0.20 },
+    overallColorMode   = "static",           -- "static" | "gradient"
+    overallStaticColor = { 0.20, 0.45, 0.95 },
+
+    -- low-mana alerts
+    blink           = true,
+    lowThreshold    = 30,                     -- percent
+    warn            = true,                   -- local raid-warning text + sound
+    announce        = false,                  -- broadcast to a chat channel
+    announceChannel = "AUTO",                 -- AUTO|SAY|PARTY|RAID|YELL|RAID_WARNING
+
+    -- ElvUI skin match
+    useElvUI        = false,
+
+    -- where the bars are shown (arena/BG win over party/raid; see ShouldShowByContext)
+    showInRaid         = true,
+    showInParty        = true,
+    showInBattleground = true,
+    showInArena        = true,
+    showAlways         = false,   -- show everywhere, even solo
 }
+ns.DEFAULTS = DEFAULTS
 
 -- ─── State ───────────────────────────────────────────────────────────────────
 local DB                       -- alias for HealerManaBarsDB, set in ApplyDefaults
@@ -93,14 +142,14 @@ local g_lastSig      = ""       -- last healer fingerprint, to detect death/rost
 local g_iconScratch = {}       -- reused per-bar icon list to avoid churn
 local EMPTY_ICONS   = {}       -- shared empty list for the (icon-less) overall bar
 
--- ─── Media resolvers (also called from the config dropdowns) ─────────────────
-function HealerManaBars_TexturePath(name)
+-- ─── Media resolvers (also called from the config dropdowns via ns.*) ─────────
+function ns.TexturePath(name)
     if LSM then return LSM:Fetch("statusbar", name) or LSM:Fetch("statusbar", "Blizzard") end
     return BUILTIN_TEXTURES[name] or BUILTIN_TEXTURES["Blizzard"]
 end
-local TexturePath = HealerManaBars_TexturePath
+local TexturePath = ns.TexturePath
 
-function HealerManaBars_TextureList()
+function ns.TextureList()
     if LSM then return LSM:List("statusbar") end
     local t = {}
     for k in pairs(BUILTIN_TEXTURES) do t[#t + 1] = k end
@@ -108,13 +157,13 @@ function HealerManaBars_TextureList()
     return t
 end
 
-function HealerManaBars_FontPath(name)
+function ns.FontPath(name)
     if LSM then return LSM:Fetch("font", name) or LSM:Fetch("font", "Friz Quadrata") end
     return BUILTIN_FONTS[name] or BUILTIN_FONTS["Friz Quadrata"]
 end
-local FontPath = HealerManaBars_FontPath
+local FontPath = ns.FontPath
 
-function HealerManaBars_FontList()
+function ns.FontList()
     if LSM then return LSM:List("font") end
     local t = {}
     for k in pairs(BUILTIN_FONTS) do t[#t + 1] = k end
@@ -694,28 +743,42 @@ local function InitAnchor()
     ApplyLock()
 end
 
-local function ApplyDefaults()
-    if HealerManaBars_EnsureDefaults then HealerManaBars_EnsureDefaults() end
+-- Seed any missing keys without clobbering the user's saved choices. Exposed so
+-- the options panel can guarantee the DB exists before it reads a widget value.
+function ns.EnsureDefaults()
     HealerManaBarsDB = HealerManaBarsDB or {}
-    DB = HealerManaBarsDB
-    -- Backstop the config file's defaults so no key the core touches is ever nil.
-    for k, v in pairs(CORE_FALLBACK) do
-        if DB[k] == nil then
+    local db = HealerManaBarsDB
+
+    -- Migrate the pre-1.0 key name before filling defaults.
+    if db.lowThreshold == nil and db.blinkThreshold ~= nil then
+        db.lowThreshold = db.blinkThreshold
+    end
+    db.blinkThreshold = nil
+
+    for k, v in pairs(DEFAULTS) do
+        if db[k] == nil then
+            -- Copy table defaults (colours) so editing the live value can't
+            -- mutate the shared DEFAULTS template.
             if type(v) == "table" then
                 local t = {}
                 for i, x in ipairs(v) do t[i] = x end
-                DB[k] = t
+                db[k] = t
             else
-                DB[k] = v
+                db[k] = v
             end
         end
     end
 end
 
+local function ApplyDefaults()
+    ns.EnsureDefaults()
+    DB = HealerManaBarsDB
+end
+
 -- Hooks the options panel (separate file) calls to apply live changes.
-HealerManaBars_Rebuild       = Rebuild
-HealerManaBars_ApplyLock     = ApplyLock
-HealerManaBars_ApplyPosition = ApplyPosition
+ns.Rebuild       = Rebuild
+ns.ApplyLock     = ApplyLock
+ns.ApplyPosition = ApplyPosition
 
 -- ─── Slash command ───────────────────────────────────────────────────────────
 local function PrintMsg(msg)
@@ -739,13 +802,13 @@ SlashCmdList["HEALERMANABARS"] = function(msg)
     elseif msg == "reset" then
         DB.pos = nil; ApplyPosition(); PrintMsg("position reset to top-left.")
     elseif msg == "config" or msg == "options" or msg == "" then
-        if HealerManaBars_OpenConfig then HealerManaBars_OpenConfig() end
+        if ns.OpenConfig then ns.OpenConfig() end
     elseif msg == "status" then
         -- Lightweight diagnostics for bug reports (see /hmb help).
         local entries = g_anchor and g_anchor._entries
         local shown = 0
         for _, b in ipairs(g_bars) do if b:IsShown() then shown = shown + 1 end end
-        PrintMsg("config file loaded = " .. tostring(HealerManaBars_EnsureDefaults ~= nil))
+        PrintMsg("panel file loaded = " .. tostring(ns.OpenConfig ~= nil))
         PrintMsg(string.format("testMode=%s  entries=%d  shownBars=%d  pool=%d",
             tostring(DB.testMode), entries and #entries or 0, shown, #g_bars))
         if g_anchor then
@@ -780,6 +843,7 @@ ev:RegisterEvent("UNIT_CONNECTION")        -- a member logged off / back on
 ev:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_LOGIN" then
         ApplyDefaults()
+        BuildAuraNameSets()
         g_fakeHealers = MakeFakeHealers()
         InitAnchor()
         Rebuild()

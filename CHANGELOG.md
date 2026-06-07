@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.8
+
+### Fixed
+- **Regen/drink indicators now work on non-English clients.** Innervate, Mana
+  Tide Totem and the drinking buff were matched by their English names, so the
+  icons never showed on de/fr/es/etc. clients. They're now matched by spell ID
+  and resolved to your client's language, and the match is rank-independent.
+
+### Changed
+- Internal cleanup, no behaviour change: the two files now share state through a
+  private addon table instead of the global namespace, and the saved-variable
+  defaults live in a single place (removing a duplicated fallback copy).
+
 ## 1.0.7
 
 ### Fixed
