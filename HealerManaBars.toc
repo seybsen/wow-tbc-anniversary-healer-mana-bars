@@ -8,6 +8,7 @@
 ## OptionalDeps: LibSharedMedia-3.0, ElvUI
 ## X-Category: Raid Frames
 ## X-Curse-Project-ID: 1566721
+## X-WoWI-ID: 27153
 
 HealerManaBarsConfig.lua
 HealerManaBars.lua

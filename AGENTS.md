@@ -170,8 +170,24 @@ Releases are tag-driven via the BigWigsMods packager (GitHub Action).
    git push origin vX.Y.Z      # or: git push origin main --follow-tags
    ```
 5. The Action packages the zip (excluding `.git*`, `.github`, `.pkgmeta`,
-   `media`), creates the GitHub Release, and uploads to CurseForge
-   (`CF_API_KEY` secret + `## X-Curse-Project-ID` in the `.toc`). WoWInterface
-   is wired but commented out.
+   `media`, `.luacheckrc`, `AGENTS.md`, `CLAUDE.md`), creates the GitHub
+   Release, and uploads to each store whose secret is set.
 
 The Action triggers on **any** tag (`tags: "**"`), so don't push throwaway tags.
+
+### Distribution stores
+
+Each store needs a secret (repo → Settings → Secrets → Actions) **and** an
+`## X-*-ID` line in the `.toc`. A target with an empty secret is silently
+skipped, so the env vars are safe to leave in place.
+
+| Store | Secret | TOC field | Status |
+|---|---|---|---|
+| CurseForge | `CF_API_KEY` | `## X-Curse-Project-ID: 1566721` | live |
+| WoWInterface | `WOWI_API_TOKEN` | `## X-WoWI-ID: 27153` | wired (needs secret) |
+| Wago.io | `WAGO_API_TOKEN` | `## X-Wago-ID` | not set up |
+| GitHub Releases | `GITHUB_TOKEN` (auto) | — | live |
+
+To add a store: create the listing on the site to obtain its ID, add the
+`## X-*-ID` to the `.toc`, add the secret, and uncomment its env var in
+`release.yml`.

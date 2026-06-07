@@ -28,6 +28,9 @@ jobs:
           # the GitHub release.
           GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
           # Add these as repository secrets to enable the matching uploads.
-          # CurseForge needs ## X-Curse-Project-ID in the .toc as well.
-          CF_API_KEY: ${{ secrets.CF_API_KEY }}
-          # WOWI_API_TOKEN: ${{ secrets.WOWI_API_TOKEN }}   # WoWInterface (optional)
+          # Each store also needs its ## X-*-ID in the .toc. A target whose
+          # secret is empty is silently skipped, so this is safe before secrets
+          # are set.
+          CF_API_KEY:     ${{ secrets.CF_API_KEY }}       # CurseForge  (X-Curse-Project-ID)
+          WOWI_API_TOKEN: ${{ secrets.WOWI_API_TOKEN }}   # WoWInterface (X-WoWI-ID)
+          # WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }} # Wago.io     (X-Wago-ID)
