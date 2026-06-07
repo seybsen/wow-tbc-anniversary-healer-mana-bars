@@ -1,9 +1,15 @@
 # Changelog
 
+## 1.0.6
+
+### Fixed
+- Corrected the Wago.io upload credentials in the release pipeline. No in-game
+  changes.
+
 ## 1.0.5
 
 ### Changed
-- Now published on **WoWInterface** and **Wago.io** in addition to CurseForge
+- Added **WoWInterface** and **Wago.io** as release targets alongside CurseForge
   and GitHub. No in-game changes.
 
 ## 1.0.4
