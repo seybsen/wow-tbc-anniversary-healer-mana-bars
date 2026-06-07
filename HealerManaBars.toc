@@ -9,6 +9,7 @@
 ## X-Category: Raid Frames
 ## X-Curse-Project-ID: 1566721
 ## X-WoWI-ID: 27153
+# ## X-Wago-ID: <create the project on addons.wago.io, then put the id here>
 
 HealerManaBarsConfig.lua
 HealerManaBars.lua

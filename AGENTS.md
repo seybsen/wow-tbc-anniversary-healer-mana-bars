@@ -185,7 +185,7 @@ skipped, so the env vars are safe to leave in place.
 |---|---|---|---|
 | CurseForge | `CF_API_KEY` | `## X-Curse-Project-ID: 1566721` | live |
 | WoWInterface | `WOWI_API_TOKEN` | `## X-WoWI-ID: 27153` | wired (needs secret) |
-| Wago.io | `WAGO_API_TOKEN` | `## X-Wago-ID` | not set up |
+| Wago.io | `WAGO_API_TOKEN` | `## X-Wago-ID` | env wired (needs project ID + secret) |
 | GitHub Releases | `GITHUB_TOKEN` (auto) | — | live |
 
 To add a store: create the listing on the site to obtain its ID, add the

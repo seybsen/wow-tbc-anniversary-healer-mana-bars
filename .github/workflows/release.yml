@@ -33,4 +33,4 @@ jobs:
           # are set.
           CF_API_KEY:     ${{ secrets.CF_API_KEY }}       # CurseForge  (X-Curse-Project-ID)
           WOWI_API_TOKEN: ${{ secrets.WOWI_API_TOKEN }}   # WoWInterface (X-WoWI-ID)
-          # WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }} # Wago.io     (X-Wago-ID)
+          WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}   # Wago.io     (X-Wago-ID)
