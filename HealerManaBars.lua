@@ -3,7 +3,7 @@
 -- ----------------------------------------------------------------------------
 -- One mana bar per raid healer plus an aggregate "overall" bar, with:
 --   · class-coloured names and configurable bar colour (class / static / gradient)
---   · mana-regen (Innervate, Mana Tide) and drinking indicator icons
+--   · mana-regen (Innervate, Mana Spring) and drinking indicator icons
 --   · low-mana alert: blink, local raid-warning, and optional chat announce
 --   · test mode, lock/unlock dragging, and configurable size / texture / font
 --
@@ -24,19 +24,18 @@ local MANA = (Enum and Enum.PowerType and Enum.PowerType.Mana) or 0
 
 local GetSpellInfo = GetSpellInfo
 
--- Auras that mark a temporary mana-regen effect / the drinking state, keyed by
--- spell ID so detection is locale-proof. (The old hard-coded name table only
--- matched an English client — regen/drink icons silently never showed on de/fr/
--- etc.) Names are resolved to the player's locale at login via GetSpellInfo and
--- cached in REGEN_AURAS/DRINK_AURAS; ranks share a name, so one ID per spell
--- covers every rank, and an ID absent on this client just resolves to nil.
--- Mana Spring Totem / Shadowfiend are best-effort: in TBC they typically apply
--- no scannable player aura, but cost nothing to list.
+-- Spell IDs of the AURAS that actually land on the player (the buff you'd see in
+-- their buff bar), resolved to the client's locale at login via GetSpellInfo so
+-- detection stays locale- and rank-proof (ranks share a buff name).
+--
+-- Only effects that put a real aura on the player are detectable this way.
+-- Verified in-game: Mana Spring Totem applies an *area aura* to each party member
+-- (detectable), but Mana Tide Totem does NOT buff players — it energizes them
+-- from a totem-side aura, so there's nothing to scan. Shadowfiend likewise
+-- returns mana with no player aura. Both are therefore intentionally omitted.
 local REGEN_SPELL_IDS = {
-    29166,   -- Innervate (Druid)
-    16190,   -- Mana Tide Totem (Shaman) — all ranks share the name
-    5675,    -- Mana Spring Totem (best-effort)
-    34433,   -- Shadowfiend (best-effort)
+    29166,   -- Innervate (Druid) — single-target buff
+    5677,    -- Mana Spring — area aura Mana Spring Totem applies to the party
 }
 local DRINK_SPELL_IDS = {
     430,     -- Drink (rank 1) — all ranks share the name "Drink"
@@ -650,7 +649,7 @@ local function MakeFakeHealers()
         { name = "Zlarx",    class = "DRUID",   max = 3900,
           regenIcon = "Interface\\Icons\\Spell_Nature_Lightning" },          -- Innervate
         { name = "Cyllino",  class = "SHAMAN",  max = 4100,
-          regenIcon = "Interface\\Icons\\Spell_Frost_SummonWaterElemental" }, -- Mana Tide
+          regenIcon = "Interface\\Icons\\Spell_Nature_ManaRegenTotem" }, -- Mana Spring
         { name = "Ellizza",  class = "SHAMAN",  max = 4000 },
         { player = true },
         { name = "Chanfana", class = "PALADIN", max = 4500 },

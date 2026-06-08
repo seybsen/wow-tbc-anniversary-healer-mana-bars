@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.10
+
+### Fixed
+- **Mana Spring Totem now shows the regen indicator.** Detection was keyed to the
+  totem's cast spell rather than the "Mana Spring" aura that lands on party
+  members (spell 5677). Verified in-game.
+
+### Changed
+- Dropped Mana Tide Totem and Shadowfiend from the regen indicator: in TBC they
+  restore mana without putting any aura on the player, so there's nothing to
+  detect by scanning buffs.
+
 ## 1.0.9
 
 ### Changed
