@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.9
+
+### Changed
+- The addon is now **always hidden in arenas and battlegrounds** — no healer
+  roles are assigned there, so it could only ever show an empty bar.
+
 ## 1.0.8
 
 ### Fixed
@@ -53,9 +59,8 @@
 ## 1.0.2
 
 ### Added
-- **Visibility** options — show/hide per context: raid, party, battleground,
-  arena, or always (even solo). The bars still stay visible while unlocked so
-  they can be positioned.
+- **Visibility** options — show/hide per context: raid, party, or always (even
+  solo). The bars still stay visible while unlocked so they can be positioned.
 - **Only the overall bar** option — hide the individual healer bars and show
   just the aggregate (still computed from the whole group).
 

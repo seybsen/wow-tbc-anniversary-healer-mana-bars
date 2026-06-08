@@ -117,12 +117,11 @@ local DEFAULTS = {
     -- ElvUI skin match
     useElvUI        = false,
 
-    -- where the bars are shown (arena/BG win over party/raid; see ShouldShowByContext)
-    showInRaid         = true,
-    showInParty        = true,
-    showInBattleground = true,
-    showInArena        = true,
-    showAlways         = false,   -- show everywhere, even solo
+    -- where the bars are shown (always hidden in arenas/BGs — no roles there;
+    -- see ShouldShowByContext)
+    showInRaid  = true,
+    showInParty = true,
+    showAlways  = false,   -- show everywhere applicable, even solo
 }
 ns.DEFAULTS = DEFAULTS
 
@@ -574,13 +573,13 @@ local function RefreshValues(entries, healers)
     end
 end
 
--- Per-context visibility. Arenas/BGs are tested before group type because the
--- instance also puts you in a party/raid, so the PvP options must win there.
+-- Per-context visibility. Arenas and battlegrounds assign no roles, so the addon
+-- can never detect healers there — it's always hidden in PvP instances (checked
+-- first, so even "always show" doesn't force a useless empty frame).
 local function ShouldShowByContext()
-    if DB.showAlways then return true end
     local _, instanceType = IsInInstance()
-    if instanceType == "arena" then return DB.showInArena end
-    if instanceType == "pvp"   then return DB.showInBattleground end
+    if instanceType == "arena" or instanceType == "pvp" then return false end
+    if DB.showAlways then return true end
     if IsInRaid()  then return DB.showInRaid end
     if IsInGroup() then return DB.showInParty end
     return false   -- solo, and "always" is off

@@ -256,10 +256,9 @@ local function BuildPanel(p)
     MakeCheckbox(child, y, "Always show (even when solo)", "showAlways")
     MakeCheckbox(child, y, "Show in raid", "showInRaid")
     MakeCheckbox(child, y, "Show in party", "showInParty")
-    MakeCheckbox(child, y, "Show in battlegrounds", "showInBattleground")
-    MakeCheckbox(child, y, "Show in arenas", "showInArena")
-    MakeDesc(child, y, "\"Always show\" overrides the rest. While unlocked the bars " ..
-        "stay visible regardless, so you can position them.")
+    MakeDesc(child, y, "Always hidden in arenas and battlegrounds (no healer roles " ..
+        "are assigned there). \"Always show\" overrides the rest; while unlocked the " ..
+        "bars stay visible so you can position them.")
 
     -- Layout ------------------------------------------------------------------
     MakeHeader(child, y, "Layout", PANEL_W)
