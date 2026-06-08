@@ -14,7 +14,9 @@ know whether the healing core has the mana to push — or needs a breather.
 - **Per-healer + overall bars.** Healers are detected by their assigned raid role.
   Or show **just the overall bar** when you only want the raid-wide picture.
 - **Regen & drinking indicators.** A small icon appears next to a healer who is
-  under **Innervate** or **Mana Tide Totem**, or who is **drinking**.
+  under **Innervate**, **Mana Spring Totem**, or **Mana Tide Totem**, or who is
+  **drinking**. (Mana Tide applies no buff aura, so it's read from the combat
+  log — which only sees healers near you.)
 - **Low-mana alerts.** When the overall healer mana drops below a configurable
   threshold you can:
   - blink the overall bar red,

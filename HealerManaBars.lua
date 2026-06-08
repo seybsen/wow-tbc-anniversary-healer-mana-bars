@@ -3,7 +3,7 @@
 -- ----------------------------------------------------------------------------
 -- One mana bar per raid healer plus an aggregate "overall" bar, with:
 --   · class-coloured names and configurable bar colour (class / static / gradient)
---   · mana-regen (Innervate, Mana Spring) and drinking indicator icons
+--   · mana-regen (Innervate, Mana Spring, Mana Tide) and drinking indicator icons
 --   · low-mana alert: blink, local raid-warning, and optional chat announce
 --   · test mode, lock/unlock dragging, and configurable size / texture / font
 --
@@ -54,6 +54,31 @@ local function BuildAuraNameSets()
     for _, id in ipairs(DRINK_SPELL_IDS) do
         local n = GetSpellInfo(id); if n then DRINK_AURAS[n] = true end
     end
+end
+
+-- Mana Tide Totem puts no aura on players (verified in-game) — it energizes the
+-- party from a totem-side aura. So we detect it from the combat log instead:
+-- watch for the periodic mana energize and flag the recipient for a short window.
+-- Match is by localized name (the totem's name and/or the "Mana Tide" effect),
+-- which covers every rank since ranks share a name.
+-- 39609 is the energize the totem actually emits on the 2.5.5 client (its name is
+-- "Mana Tide Totem", same across ranks); 16190/16191 are kept for other builds
+-- but don't resolve here. We match the combat-log energize by the totem's
+-- localized name, which covers every rank.
+local MANATIDE_IDS    = { 39609, 16190, 16191 }
+local MANATIDE_WINDOW = 4                   -- seconds; refreshed by each ~3s tick
+local MANATIDE_NAMES  = {}                  -- locale-resolved, filled at login
+local MANATIDE_ICON                         -- filled at login
+local function BuildManaTide()
+    wipe(MANATIDE_NAMES)
+    if GetSpellInfo then
+        for _, id in ipairs(MANATIDE_IDS) do
+            local n = GetSpellInfo(id); if n then MANATIDE_NAMES[n] = true end
+        end
+    end
+    -- Hardcoded: GetSpellTexture(39609) returns the *energize effect's* art (a
+    -- Vampiric-Touch-looking icon), not the recognizable totem icon.
+    MANATIDE_ICON = "Interface\\Icons\\Spell_Frost_SummonWaterElemental"
 end
 
 -- Media that always ships with the client. When LibSharedMedia-3.0 is present
@@ -136,6 +161,9 @@ local g_overallBlink = false   -- is the overall bar currently in the low state?
 local g_blinkPhase   = 0       -- accumulator driving the blink sine wave
 local g_lowActive    = false   -- latch so the low-mana alert fires once per dip
 local g_lastSig      = ""       -- last healer fingerprint, to detect death/roster shifts
+local g_manaTide     = {}       -- destGUID -> GetTime() expiry, from the combat log
+local g_clogOn       = false    -- is the combat-log (Mana Tide) tracker registered?
+local g_tideDebug    = false    -- /hmb tidedebug: print energize events to find IDs
 
 local g_iconScratch = {}       -- reused per-bar icon list to avoid churn
 local EMPTY_ICONS   = {}       -- shared empty list for the (icon-less) overall bar
@@ -337,8 +365,9 @@ local function AcquireBar(i)
 
     -- Status icons sit *outside* the bar's right edge (see SetBarIcons), so the
     -- bar keeps its configured width and the % text is never overlapped.
+    -- Up to three: mana-regen, Mana Tide, drinking.
     bar.icons = {}
-    for n = 1, 2 do
+    for n = 1, 3 do
         local ic = bar:CreateTexture(nil, "OVERLAY")
         ic:SetTexCoord(0.08, 0.92, 0.08, 0.92)   -- trim the default icon border
         ic:Hide()
@@ -402,6 +431,38 @@ local function ScanRegenDrink(unit)
         end
     end
     return regenIcon, drinkIcon
+end
+
+-- ─── Mana Tide (combat-log) ──────────────────────────────────────────────────
+-- A dedicated frame so combat-log spam never touches the rebuild path. It is
+-- only registered while we're actually showing real healers (see SetTideTracking),
+-- so solo / hidden / test mode pay nothing.
+local g_clog = CreateFrame("Frame")
+g_clog:SetScript("OnEvent", function()
+    local _, sub, _, _, srcName, _, _, destGUID, destName, _, _, spellId, spellName
+        = CombatLogGetCurrentEventInfo()
+    if sub ~= "SPELL_PERIODIC_ENERGIZE" and sub ~= "SPELL_ENERGIZE" then return end
+    if g_tideDebug then
+        DEFAULT_CHAT_FRAME:AddMessage(string.format(
+            "|cff66ccffHMB tide|r energize: spell=%s id=%s src=%s dest=%s",
+            tostring(spellName), tostring(spellId), tostring(srcName), tostring(destName)))
+    end
+    -- The energize can be attributed to the totem (source) or the effect (spell);
+    -- match either localized name so we catch it regardless.
+    if destGUID and (MANATIDE_NAMES[spellName] or MANATIDE_NAMES[srcName]) then
+        g_manaTide[destGUID] = GetTime() + MANATIDE_WINDOW
+    end
+end)
+
+local function SetTideTracking(on)
+    if on == g_clogOn then return end
+    g_clogOn = on
+    if on then
+        g_clog:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+    else
+        g_clog:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+        wipe(g_manaTide)
+    end
 end
 
 -- ─── Layout ──────────────────────────────────────────────────────────────────
@@ -564,8 +625,15 @@ local function RefreshValues(entries, healers)
             else
                 regenIcon, drinkIcon = ScanRegenDrink(e.unit)
             end
+            -- Mana Tide has no player aura, so it comes from the combat-log tracker.
+            local tideIcon
+            if e.unit then
+                local guid = UnitGUID(e.unit)
+                if guid and (g_manaTide[guid] or 0) > GetTime() then tideIcon = MANATIDE_ICON end
+            end
             wipe(g_iconScratch)
             if regenIcon then g_iconScratch[#g_iconScratch + 1] = regenIcon end
+            if tideIcon  then g_iconScratch[#g_iconScratch + 1] = tideIcon  end
             if drinkIcon then g_iconScratch[#g_iconScratch + 1] = drinkIcon end
             SetBarIcons(bar, g_iconScratch)
         end
@@ -593,10 +661,14 @@ local function Rebuild()
     -- also hides every child bar and suspends its OnUpdate.
     if not (DB.testMode or not DB.locked or ShouldShowByContext()) then
         g_anchor:Hide()
+        SetTideTracking(false)
         return
     end
     g_anchor:Show()
     g_anchor:SetAlpha(DB.opacity or 1)   -- whole-cluster opacity
+
+    -- Mana Tide tracking only makes sense for real grouped healers.
+    SetTideTracking(not DB.testMode and IsInGroup())
 
     local entries, healers = BuildEntries()
     for _, bar in ipairs(g_bars) do bar:Hide() end
@@ -799,6 +871,9 @@ SlashCmdList["HEALERMANABARS"] = function(msg)
         DB.growth = msg; Rebuild(); PrintMsg("growth: " .. msg)
     elseif msg == "reset" then
         DB.pos = nil; ApplyPosition(); PrintMsg("position reset to top-left.")
+    elseif msg == "tidedebug" then
+        g_tideDebug = not g_tideDebug
+        PrintMsg("Mana Tide energize debug " .. (g_tideDebug and "ON — drop a Mana Tide Totem near a tracked healer and read the printed spell/src." or "OFF."))
     elseif msg == "config" or msg == "options" or msg == "" then
         if ns.OpenConfig then ns.OpenConfig() end
     elseif msg == "status" then
@@ -842,6 +917,7 @@ ev:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_LOGIN" then
         ApplyDefaults()
         BuildAuraNameSets()
+        BuildManaTide()
         g_fakeHealers = MakeFakeHealers()
         InitAnchor()
         Rebuild()

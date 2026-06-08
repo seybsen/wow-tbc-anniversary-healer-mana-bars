@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.11
+
+### Added
+- **Mana Tide Totem indicator (via combat log).** Mana Tide puts no aura on
+  players, so it's detected from the totem's energize ticks and shown for the
+  totem's duration. Range-limited — the combat log only reports healers near you.
+
 ## 1.0.10
 
 ### Fixed
