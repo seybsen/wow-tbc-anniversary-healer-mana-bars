@@ -33,6 +33,11 @@ know whether the healing core has the mana to push — or needs a breather.
 - **Fully configurable look.** Bar colour (class / static / green→red gradient),
   width, height, spacing, grow direction (up/down), bar texture, font & size, and
   overall / background opacity. Names are always class-coloured.
+- **Per-element layout** — independently place the name (left/right), the % value
+  (left/right/hidden), the status icons (left/right), and the fill direction
+  (left→right or right→left). Mirror everything for a cluster docked on the
+  **right** of your screen so the icons don't overflow and the bar drains toward
+  the edge.
 - **LibSharedMedia** aware — your shared textures and fonts show up in the lists.
 - **ElvUI** option to borrow ElvUI's texture and font so the bars blend in.
 - **Movable** — unlock to drag the cluster anywhere.

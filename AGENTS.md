@@ -93,7 +93,13 @@ OnUpdate (every frame):
 - **`RefreshValues()`** aggregates mana, drives the overall bar, the low-mana
   latch (`g_lowActive`, with +5% hysteresis), per-bar colour/icons.
 - Bars are **pooled** (`g_bars`, `AcquireBar`) and re-styled each rebuild, so
-  config changes apply live without recreating frames.
+  config changes apply live without recreating frames. Element placement is data-
+  driven: `AcquireBar` only *creates* the name/value font strings; their anchors
+  are (re)applied every rebuild in `LayoutBarElements` (`nameSide`/`valueSide`)
+  and `SetBarIcons` (`iconSide`), so the per-element layout options switch live.
+  Don't re-add fixed `SetPoint`s in `AcquireBar`. Fill direction (`fillDir`) uses
+  `StatusBar:SetReverseFill`, guarded (`if bar.SetReverseFill then …`) since older
+  clients lack it.
 
 ### Key design points / conventions
 
@@ -150,11 +156,17 @@ OnUpdate (every frame):
   supports both — keep both paths.
 - **Settings panel registration** uses modern `Settings.RegisterCanvasLayout*`
   with a fallback to classic `InterfaceOptions_AddCategory`. Same for opening.
+- **The panel is tabbed.** `BuildPanel` only builds the title + tab buttons and,
+  per tab, a `UIPanelScrollFrameTemplate` page; each page's widgets live in a
+  `Build<Tab>Tab(child)` function (General/Layout/Colours/Alerts) that runs the
+  same shared y-cursor over its own scroll child. `show(idx)` toggles page
+  visibility + `LockHighlight`. Add a setting's widget to the relevant
+  `Build<Tab>Tab`, not `BuildPanel`.
 - **Slider/dropdown sub-widgets** (Low/High labels) aren't exposed as parentKeys
   on every build — fall back to `_G[name.."Low"]`. Same defensive pattern for
   radio button text.
 - Adding a setting touches **three** places: `DEFAULTS` (runtime), a widget in
-  `BuildPanel`, and the consuming logic.
+  the relevant `Build<Tab>Tab`, and the consuming logic.
 
 ## Testing (no automated harness — it's in-client)
 

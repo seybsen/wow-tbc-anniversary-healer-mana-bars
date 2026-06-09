@@ -129,6 +129,10 @@ local DEFAULTS = {
     overallOnly  = false,      -- show only the overall bar, no individual healers
     hideDead     = false,      -- hide dead healers; when off they're greyed out
     growth       = "down",     -- "down" | "up"
+    nameSide     = "left",      -- name text edge: "left" | "right"
+    valueSide    = "right",     -- % readout: "left" | "right" | "hidden"
+    iconSide     = "right",     -- status icons overflow this edge: "left" | "right"
+    fillDir      = "lr",        -- bar fill: "lr" (empties from right) | "rl" (from left)
     barW         = 160,
     barH         = 16,
     spacing      = 2,
@@ -376,16 +380,13 @@ local function AcquireBar(i)
     bar.bg = bar:CreateTexture(nil, "BACKGROUND")
     bar.bg:SetAllPoints(bar)
 
+    -- Text anchors (name/value sides) are applied per rebuild in StyleBar so the
+    -- layout options take effect live; just create the strings here.
     bar.label = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    bar.label:SetPoint("LEFT", bar, "LEFT", 4, 0)
-    bar.label:SetJustifyH("LEFT")
-
     bar.value = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    bar.value:SetPoint("RIGHT", bar, "RIGHT", -4, 0)
-    bar.value:SetJustifyH("RIGHT")
 
-    -- Status icons sit *outside* the bar's right edge (see SetBarIcons), so the
-    -- bar keeps its configured width and the % text is never overlapped.
+    -- Status icons sit *outside* the bar (the configured edge; see SetBarIcons),
+    -- so the bar keeps its width and the % text is never overlapped.
     -- Up to three: mana-regen, Mana Tide, drinking.
     bar.icons = {}
     for n = 1, 3 do
@@ -454,31 +455,69 @@ local function UpdateSecure(bar, entry)
     sec:EnableMouse(DB.locked and DB.clickToTarget)
 end
 
+-- Anchor the name/value text to their configured edges (icons are handled in
+-- SetBarIcons). Re-done each rebuild so the layout options apply live; lets you
+-- mirror everything for a cluster docked on the right of the screen.
+local function LayoutBarElements(bar)
+    bar.label:ClearAllPoints()
+    if DB.nameSide == "right" then
+        bar.label:SetPoint("RIGHT", bar, "RIGHT", -4, 0)
+        bar.label:SetJustifyH("RIGHT")
+    else
+        bar.label:SetPoint("LEFT", bar, "LEFT", 4, 0)
+        bar.label:SetJustifyH("LEFT")
+    end
+
+    bar.value:ClearAllPoints()
+    if DB.valueSide == "hidden" then
+        bar.value:Hide()
+    else
+        bar.value:Show()
+        if DB.valueSide == "left" then
+            bar.value:SetPoint("LEFT", bar, "LEFT", 4, 0)
+            bar.value:SetJustifyH("LEFT")
+        else
+            bar.value:SetPoint("RIGHT", bar, "RIGHT", -4, 0)
+            bar.value:SetJustifyH("RIGHT")
+        end
+    end
+end
+
 -- Apply size/texture/font. Cheap to redo on every rebuild, so config changes
 -- take effect immediately without recreating frames.
 local function StyleBar(bar)
     bar:SetSize(DB.barW, DB.barH)
     bar:SetStatusBarTexture(CurrentTexture())
+    -- Reverse fill anchors the filled portion to the right edge (empties from the
+    -- left) — pairs with a right-of-screen mirror. Guarded: older clients lack it.
+    if bar.SetReverseFill then bar:SetReverseFill(DB.fillDir == "rl") end
     -- Reuse the bar texture (darkened) as the background so the empty portion
     -- matches the fill instead of being a flat block.
     bar.bg:SetTexture(CurrentTexture())
     bar.bg:SetVertexColor(0, 0, 0, DB.bgOpacity or 0.55)
     ApplyFont(bar.label)
     ApplyFont(bar.value)
+    LayoutBarElements(bar)
     local isz = math.max(8, DB.barH - 4)
     for _, ic in ipairs(bar.icons) do ic:SetSize(isz, isz) end
 end
 
--- Lay out the active icons just past the bar's right edge, growing rightward.
+-- Lay out the active icons just past the configured bar edge, growing outward
+-- (rightward off the right edge by default, or leftward off the left edge).
 local function SetBarIcons(bar, iconList)
+    local left = (DB.iconSide == "left")
     local prev
     for idx = 1, #bar.icons do
         local ic, path = bar.icons[idx], iconList[idx]
         if path then
             ic:SetTexture(path)
             ic:ClearAllPoints()
-            -- chain off the previous icon, or the bar's right edge for the first
-            ic:SetPoint("LEFT", prev or bar, "RIGHT", prev and 2 or 3, 0)
+            -- chain off the previous icon, or the bar's edge for the first
+            if left then
+                ic:SetPoint("RIGHT", prev or bar, "LEFT", -(prev and 2 or 3), 0)
+            else
+                ic:SetPoint("LEFT", prev or bar, "RIGHT", prev and 2 or 3, 0)
+            end
             ic:Show()
             prev = ic
         else

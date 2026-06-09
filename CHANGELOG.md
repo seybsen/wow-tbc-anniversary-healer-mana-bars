@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.0.13
+
+### Added
+- **Per-element layout options** (Layout section): independently place the
+  **name** (left/right), the **% value** (left/right/hidden), the **status
+  icons** (left/right), and the **fill direction** (left→right or right→left).
+  Defaults are unchanged, so existing setups look the same.
+- Lets you **mirror the bars for a right-of-screen cluster** — icons on the Left,
+  name on the Right, fill right→left, so nothing overflows off-screen and the bar
+  drains toward the edge.
+
+### Changed
+- **The options panel is now tabbed** (General · Layout · Colours · Alerts)
+  instead of one long scrolling list, so settings are easier to find.
+
 ## 1.0.12
 
 ### Added

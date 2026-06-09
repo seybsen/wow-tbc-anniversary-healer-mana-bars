@@ -237,35 +237,13 @@ local function MakeMediaDropdown(parent, yRef, label, frameName, dbKey, listFn)
 end
 
 -- ─── Panel contents ──────────────────────────────────────────────────────────
-local function BuildPanel(p)
-    if p._built then return end   -- build once; OnShow can fire repeatedly
-    p._built = true
-    -- The panel can be opened before our PLAYER_LOGIN handler runs, so make sure
-    -- the DB is seeded before any widget reads it.
-    ns.EnsureDefaults()
+-- Each tab builds its widgets into its own scroll page, so a page only scrolls
+-- if it actually overflows. The shared y-cursor pattern is unchanged — it just
+-- runs once per tab instead of over one giant list. PANEL_W is the content width.
+local PANEL_W = 480
 
-    local PANEL_W = 480
-    local version = (C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata)(ADDON_NAME, "Version") or "dev"
-
-    local title = p:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
-    title:SetPoint("TOPLEFT", p, "TOPLEFT", 14, -14)
-    title:SetText("|cff66ccffHealer Mana Bars|r")
-    local verFs = p:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    verFs:SetPoint("LEFT", title, "RIGHT", 6, 0)
-    verFs:SetText("|cff555577v" .. version .. "|r")
-
-    -- Scrolling content: the child is taller than the panel and sized to fit at
-    -- the end, so the option list can grow without manual height bookkeeping.
-    local scroll = CreateFrame("ScrollFrame", "HealerManaBarsScroll", p, "UIPanelScrollFrameTemplate")
-    scroll:SetPoint("TOPLEFT", p, "TOPLEFT", 14, -44)
-    scroll:SetPoint("BOTTOMRIGHT", p, "BOTTOMRIGHT", -30, 10)
-    local child = CreateFrame("Frame", "HealerManaBarsScrollChild")
-    child:SetSize(PANEL_W, 1000)
-    scroll:SetScrollChild(child)
-
+local function BuildGeneralTab(child)
     local y = { v = 0 }
-
-    -- General -----------------------------------------------------------------
     MakeHeader(child, y, "General", PANEL_W)
     MakeCheckbox(child, y, "Test mode (simulate fake healers)", "testMode")
     MakeCheckbox(child, y, "Show overall (aggregate) bar", "showOverall")
@@ -277,7 +255,6 @@ local function BuildPanel(p)
     MakeCheckbox(child, y, "Locked (uncheck to drag the bars)", "locked",
         function() ApplyLock() end)
 
-    -- Interaction -------------------------------------------------------------
     MakeHeader(child, y, "Interaction", PANEL_W)
     MakeCheckbox(child, y, "Click a healer's bar to target them", "clickToTarget")
     MakeEditBox(child, y, "Right-click spell (cast on that healer; blank = off)", "rightClickSpell")
@@ -286,7 +263,6 @@ local function BuildPanel(p)
         "clickable only while locked; the overall bar and test-mode simulated healers " ..
         "aren't real units, so clicking them does nothing.")
 
-    -- Visibility --------------------------------------------------------------
     MakeHeader(child, y, "Visibility", PANEL_W)
     MakeCheckbox(child, y, "Always show (even when solo)", "showAlways")
     MakeCheckbox(child, y, "Show in raid", "showInRaid")
@@ -294,8 +270,11 @@ local function BuildPanel(p)
     MakeDesc(child, y, "Always hidden in arenas and battlegrounds (no healer roles " ..
         "are assigned there). \"Always show\" overrides the rest; while unlocked the " ..
         "bars stay visible so you can position them.")
+    child:SetHeight(math.abs(y.v) + 30)
+end
 
-    -- Layout ------------------------------------------------------------------
+local function BuildLayoutTab(child)
+    local y = { v = 0 }
     MakeHeader(child, y, "Layout", PANEL_W)
     MakeLabel(child, y, "Growth direction")
     MakeRadioGroup(child, y, {
@@ -304,6 +283,38 @@ local function BuildPanel(p)
     }, HealerManaBarsDB.growth, function(key)
         HealerManaBarsDB.growth = key; Rebuild()
     end)
+    MakeLabel(child, y, "Name side")
+    MakeRadioGroup(child, y, {
+        { key = "left",  label = "Left" },
+        { key = "right", label = "Right" },
+    }, HealerManaBarsDB.nameSide, function(key)
+        HealerManaBarsDB.nameSide = key; Rebuild()
+    end)
+    MakeLabel(child, y, "Value (%) side")
+    MakeRadioGroup(child, y, {
+        { key = "right",  label = "Right" },
+        { key = "left",   label = "Left" },
+        { key = "hidden", label = "Hidden" },
+    }, HealerManaBarsDB.valueSide, function(key)
+        HealerManaBarsDB.valueSide = key; Rebuild()
+    end)
+    MakeLabel(child, y, "Status icons side")
+    MakeRadioGroup(child, y, {
+        { key = "right", label = "Right" },
+        { key = "left",  label = "Left" },
+    }, HealerManaBarsDB.iconSide, function(key)
+        HealerManaBarsDB.iconSide = key; Rebuild()
+    end)
+    MakeLabel(child, y, "Fill direction")
+    MakeRadioGroup(child, y, {
+        { key = "lr", label = "Left → right (empties from the right)" },
+        { key = "rl", label = "Right → left (empties from the left)" },
+    }, HealerManaBarsDB.fillDir, function(key)
+        HealerManaBarsDB.fillDir = key; Rebuild()
+    end)
+    MakeDesc(child, y, "Place elements to suit where the cluster sits. Docking it on the " ..
+        "right of your screen? Put status icons on the Left, the name on the Right, and " ..
+        "fill Right → left so nothing overflows off-screen and the bar drains toward the edge.")
     MakeSlider(child, y, "Bar width",  "barW",    60, 400, 1)
     MakeSlider(child, y, "Bar height", "barH",     8,  40, 1)
     MakeSlider(child, y, "Spacing",    "spacing",  0,  20, 1)
@@ -318,8 +329,11 @@ local function BuildPanel(p)
     else
         MakeDesc(child, y, "ElvUI not detected — ElvUI texture/font option hidden.", 0)
     end
+    child:SetHeight(math.abs(y.v) + 30)
+end
 
-    -- Colours -----------------------------------------------------------------
+local function BuildColoursTab(child)
+    local y = { v = 0 }
     MakeHeader(child, y, "Colours", PANEL_W)
     MakeLabel(child, y, "Healer bars")
     MakeRadioGroup(child, y, {
@@ -340,8 +354,11 @@ local function BuildPanel(p)
     end)
     MakeColorRow(child, y, "Overall static colour", HealerManaBarsDB.overallStaticColor)
     MakeDesc(child, y, "Player names are always shown in class colours.", 0)
+    child:SetHeight(math.abs(y.v) + 30)
+end
 
-    -- Low-mana alerts ---------------------------------------------------------
+local function BuildAlertsTab(child)
+    local y = { v = 0 }
     MakeHeader(child, y, "Low-mana alerts", PANEL_W)
     MakeSlider(child, y, "Threshold (%)", "lowThreshold", 5, 90, 1)
     MakeCheckbox(child, y, "Blink the overall bar red when below threshold", "blink")
@@ -361,8 +378,65 @@ local function BuildPanel(p)
     }, HealerManaBarsDB.announceChannel, function(key)
         HealerManaBarsDB.announceChannel = key
     end)
-
     child:SetHeight(math.abs(y.v) + 30)
+end
+
+local function BuildPanel(p)
+    if p._built then return end   -- build once; OnShow can fire repeatedly
+    p._built = true
+    -- The panel can be opened before our PLAYER_LOGIN handler runs, so make sure
+    -- the DB is seeded before any widget reads it.
+    ns.EnsureDefaults()
+
+    local version = (C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata)(ADDON_NAME, "Version") or "dev"
+
+    local title = p:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
+    title:SetPoint("TOPLEFT", p, "TOPLEFT", 14, -14)
+    title:SetText("|cff66ccffHealer Mana Bars|r")
+    local verFs = p:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    verFs:SetPoint("LEFT", title, "RIGHT", 6, 0)
+    verFs:SetText("|cff555577v" .. version .. "|r")
+
+    local tabs = {
+        { name = "General", build = BuildGeneralTab },
+        { name = "Layout",  build = BuildLayoutTab },
+        { name = "Colours", build = BuildColoursTab },
+        { name = "Alerts",  build = BuildAlertsTab },
+    }
+
+    -- Highlight the active tab's button and show only its page.
+    local function show(idx)
+        for i, t in ipairs(tabs) do
+            t.scroll:SetShown(i == idx)
+            if i == idx then t.btn:LockHighlight() else t.btn:UnlockHighlight() end
+        end
+    end
+
+    local prev
+    for i, t in ipairs(tabs) do
+        local btn = CreateFrame("Button", nil, p, "UIPanelButtonTemplate")
+        btn:SetSize(94, 22)
+        btn:SetText(t.name)
+        if prev then
+            btn:SetPoint("LEFT", prev, "RIGHT", 4, 0)
+        else
+            btn:SetPoint("TOPLEFT", p, "TOPLEFT", 14, -44)
+        end
+        btn:SetScript("OnClick", function() show(i) end)
+        t.btn, prev = btn, btn
+
+        -- One scroll page per tab; only the active one is shown (see show()).
+        local scroll = CreateFrame("ScrollFrame", nil, p, "UIPanelScrollFrameTemplate")
+        scroll:SetPoint("TOPLEFT", p, "TOPLEFT", 14, -76)
+        scroll:SetPoint("BOTTOMRIGHT", p, "BOTTOMRIGHT", -30, 10)
+        local cont = CreateFrame("Frame", nil, scroll)
+        cont:SetSize(PANEL_W, 1)
+        scroll:SetScrollChild(cont)
+        t.scroll = scroll
+        t.build(cont)
+    end
+
+    show(1)
 end
 
 panel:SetScript("OnShow", function(self) BuildPanel(self) end)
