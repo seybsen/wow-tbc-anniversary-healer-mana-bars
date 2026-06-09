@@ -24,3 +24,4 @@ ignore:
   - "AGENTS.md"
   - "CLAUDE.md"
   - "media"
+  - "tools"

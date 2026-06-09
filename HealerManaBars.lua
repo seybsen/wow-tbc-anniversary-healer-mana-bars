@@ -81,6 +81,20 @@ local function BuildManaTide()
     MANATIDE_ICON = "Interface\\Icons\\Spell_Frost_SummonWaterElemental"
 end
 
+-- The right-click spell is user-configurable (DB.rightClickSpell). To seed a
+-- sensible default we resolve Innervate's localized name at login and flag
+-- whether the player is a druid who knows it; SeedRightClickSpell uses that for
+-- the one-time class default. GetSpellInfo keeps the name locale-proof.
+local INNERVATE_SPELL_ID = 29166
+local g_innervateName            -- localized "Innervate", or nil
+local g_canInnervate = false     -- player is a druid who knows Innervate
+local function ComputeInnervate()
+    local _, class = UnitClass("player")
+    g_innervateName = GetSpellInfo and GetSpellInfo(INNERVATE_SPELL_ID) or nil
+    g_canInnervate  = (class == "DRUID") and g_innervateName ~= nil
+        and (not IsSpellKnown or IsSpellKnown(INNERVATE_SPELL_ID))
+end
+
 -- Media that always ships with the client. When LibSharedMedia-3.0 is present
 -- we defer to its (much larger) registry instead, so the dropdowns match what
 -- the rest of the user's UI offers.
@@ -137,6 +151,13 @@ local DEFAULTS = {
     warn            = true,                   -- local raid-warning text + sound
     announce        = false,                  -- broadcast to a chat channel
     announceChannel = "AUTO",                 -- AUTO|SAY|PARTY|RAID|YELL|RAID_WARNING
+
+    -- click interaction (secure overlay; see UpdateSecure)
+    clickToTarget   = true,   -- left-click a healer bar to target them
+    -- rightClickSpell: spell name cast on a healer with right-click ("" = off).
+    -- Left nil here (like `pos`) and seeded at login by class — Innervate for
+    -- druids, "" for everyone else — since DEFAULTS can't know the class.
+    rightClickSpell = nil,
 
     -- ElvUI skin match
     useElvUI        = false,
@@ -382,6 +403,55 @@ local function AcquireBar(i)
 
     g_bars[i] = bar
     return bar
+end
+
+-- ─── Click-to-target / right-click Innervate (secure) ────────────────────────
+-- Targeting a unit and casting a spell on it are *protected* actions: they must
+-- go through a SecureActionButtonTemplate whose attributes are set out of combat
+-- (SetAttribute is blocked while InCombatLockdown). So each bar carries a secure
+-- overlay button; left-click targets the healer, right-click casts Innervate
+-- (druids only). Attribute writes — and the create/anchor of a new overlay — are
+-- skipped in combat and re-applied on PLAYER_REGEN_ENABLED (which Rebuilds).
+local function EnsureSecure(bar, i)
+    -- CreateFrame/SetPoint on a protected frame is also blocked in combat, so if
+    -- the pool grows mid-fight we leave the overlay until combat ends.
+    if bar.secure or InCombatLockdown() then return end
+    local sec = CreateFrame("Button", "HealerManaBarButton" .. i, bar, "SecureActionButtonTemplate")
+    sec:SetAllPoints(bar)
+    sec:RegisterForClicks("AnyUp")   -- both buttons; left=target, right=Innervate
+    bar.secure = sec
+end
+
+-- Point the overlay at this entry's unit. Cleared for the overall/test bars (no
+-- real unit) so a click there is a harmless no-op. Mouse is enabled only while
+-- locked, so an unlocked cluster stays draggable instead of eating the click.
+local function UpdateSecure(bar, entry)
+    local sec = bar.secure
+    if not sec or InCombatLockdown() then return end
+    -- Clicking disabled (DB.clickToTarget) drops the unit so every click no-ops;
+    -- the overall/test bars carry no real unit to target either.
+    local unit = DB.clickToTarget and entry.unit or nil
+    -- Right-click casts the user's configured spell on that unit; blank = off.
+    local spell = DB.rightClickSpell
+    if spell == "" then spell = nil end
+    if unit then
+        sec:SetAttribute("unit", unit)
+        sec:SetAttribute("type1", "target")
+        if spell then
+            sec:SetAttribute("type2", "spell")
+            sec:SetAttribute("spell2", spell)
+        else
+            sec:SetAttribute("type2", nil)
+            sec:SetAttribute("spell2", nil)
+        end
+    else
+        sec:SetAttribute("unit", nil)
+        sec:SetAttribute("type1", nil)
+        sec:SetAttribute("type2", nil)
+        sec:SetAttribute("spell2", nil)
+    end
+    -- Mouse on only while locked AND clicking enabled, so unlocked/off = draggable.
+    sec:EnableMouse(DB.locked and DB.clickToTarget)
 end
 
 -- Apply size/texture/font. Cheap to redo on every rebuild, so config changes
@@ -672,10 +742,12 @@ local function Rebuild()
 
     local entries, healers = BuildEntries()
     for _, bar in ipairs(g_bars) do bar:Hide() end
-    for i in ipairs(entries) do
+    for i, e in ipairs(entries) do
         local bar = AcquireBar(i)
+        EnsureSecure(bar, i)
         StyleBar(bar)
         bar:Show()
+        UpdateSecure(bar, e)
     end
     LayoutBars(#entries)
     RefreshValues(entries, healers)
@@ -901,6 +973,7 @@ SlashCmdList["HEALERMANABARS"] = function(msg)
         PrintMsg("  /hmb up|down      — growth direction")
         PrintMsg("  /hmb reset        — reset position to top-left")
         PrintMsg("  /hmb status       — print diagnostics")
+        PrintMsg("tip: while locked, left-click a bar to target; right-click casts your configured spell (see options).")
     end
 end
 
@@ -913,11 +986,19 @@ ev:RegisterEvent("GROUP_ROSTER_UPDATE")
 ev:RegisterEvent("PLAYER_ROLES_ASSIGNED")
 ev:RegisterEvent("PLAYER_ENTERING_WORLD")
 ev:RegisterEvent("UNIT_CONNECTION")        -- a member logged off / back on
+ev:RegisterEvent("PLAYER_REGEN_ENABLED")   -- combat ended → flush deferred secure attrs
 ev:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_LOGIN" then
         ApplyDefaults()
         BuildAuraNameSets()
         BuildManaTide()
+        ComputeInnervate()
+        -- One-time class default for the right-click spell: druids → Innervate,
+        -- everyone else → "" (off). nil means "never seeded", so clearing the
+        -- field to "" later sticks and is not re-seeded.
+        if DB.rightClickSpell == nil then
+            DB.rightClickSpell = g_canInnervate and g_innervateName or ""
+        end
         g_fakeHealers = MakeFakeHealers()
         InitAnchor()
         Rebuild()

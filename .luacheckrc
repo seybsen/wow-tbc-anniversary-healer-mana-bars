@@ -41,9 +41,11 @@ read_globals = {
     "RAID_CLASS_COLORS", "ElvUI",
     -- unit + group queries
     "UnitClass", "UnitName", "UnitExists", "UnitIsConnected", "UnitIsDeadOrGhost",
-    "UnitGroupRolesAssigned", "UnitPower", "UnitPowerMax", "UnitBuff",
+    "UnitGroupRolesAssigned", "UnitPower", "UnitPowerMax", "UnitBuff", "UnitGUID",
     "IsInRaid", "IsInGroup", "GetNumGroupMembers", "IsInInstance",
-    "GetSpellInfo",
+    "GetSpellInfo", "IsSpellKnown", "InCombatLockdown",
+    -- combat log / timing (Mana Tide detection)
+    "CombatLogGetCurrentEventInfo", "GetTime",
     -- chat / alerts
     "SendChatMessage", "DEFAULT_CHAT_FRAME", "ChatTypeInfo",
     "RaidNotice_AddMessage", "RaidWarningFrame", "PlaySound", "SOUNDKIT",

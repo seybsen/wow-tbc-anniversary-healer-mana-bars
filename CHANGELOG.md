@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.0.12
+
+### Added
+- **Click a healer's bar to target them.** Each individual bar is now an
+  interactive unit button — left-click targets that healer.
+- **Right-click to cast a configurable spell** on that healer. Set any spell name
+  in the new *Interaction* options (e.g. Innervate, Power Infusion); it defaults
+  to **Innervate for druids** and blank for everyone else, and a blank field
+  disables right-click. Cast by name, so localized clients work.
+- Bars are only clickable while **locked**; unlock as before to drag the cluster.
+  The overall and test-mode bars aren't tied to a real unit, so clicking them
+  does nothing. Because target/cast are protected, the click mapping can't change
+  mid-combat — it re-syncs to the current roster the moment you leave combat.
+- Click-to-target itself can also be disabled in the *Interaction* options.
+
 ## 1.0.11
 
 ### Added

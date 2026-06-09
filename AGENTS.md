@@ -52,6 +52,7 @@ regen/drinking indicators and configurable low-mana alerts.
 | `.github/workflows/release.yml` | CI: on any tag push, packages + publishes to GitHub Release and CurseForge. |
 | `.github/workflows/lint.yml` | CI: runs `luacheck` on every push / PR. |
 | `media/` | CurseForge listing art (`banner.png`, `icon.png`). **Not shipped** in the addon zip. |
+| `tools/` | Dev-only helpers (`lint.ps1` — Docker-wrapped luacheck). **Not shipped** in the addon zip. |
 | `README.md` | User-facing docs / CurseForge description. |
 
 > **Untracked `HealerManaBars/` subfolder:** a byte-identical packaging staging
@@ -116,9 +117,29 @@ OnUpdate (every frame):
   in the **runtime** (not the panel), so the DB is fully seeded even if the panel
   file fails to load. `ns.EnsureDefaults` fills missing keys (and migrates the
   pre-1.0 `blinkThreshold`). There is no second fallback copy to keep in sync.
+- **Each bar carries a secure click overlay** (`bar.secure`, a
+  `SecureActionButtonTemplate` button covering the bar) for click-to-target /
+  right-click-Innervate. `EnsureSecure` creates it; `UpdateSecure` re-points it
+  each rebuild (`type1="target"`/`unit`; druids also `type2="spell"`/`spell2`).
+  Overlay mouse is on only while **locked**, so unlocked = draggable. Overall and
+  test bars have no real unit, so their attributes are cleared (clicks no-op).
+  Two settings drive it: `clickToTarget` (master left-click toggle) and
+  `rightClickSpell` (the spell cast on right-click; `""` = off, cast by name via
+  `spell2`). `rightClickSpell` defaults are **class-dependent**, so — like `pos`
+  — it's `nil` in `DEFAULTS` and seeded once at login (Innervate for druids, `""`
+  otherwise); `nil` means "never seeded", so a user-cleared `""` is not re-seeded.
+  `ComputeInnervate` resolves Innervate's localized name (spell ID, locale-proof)
+  for that default.
 
 ## WoW API gotchas (important — these caused real bugs)
 
+- **Secure frames can't be touched in combat.** `SetAttribute`, and the
+  create/`SetPoint` of a `SecureActionButtonTemplate`, are blocked while
+  `InCombatLockdown()`. `EnsureSecure`/`UpdateSecure` no-op in combat; the addon
+  registers `PLAYER_REGEN_ENABLED` (→ `Rebuild`) to re-apply once combat ends.
+  Consequence: if the roster reorders mid-fight, a bar's click target can briefly
+  point at the old unit until combat ends — this is a hard engine limit, not a
+  bug to "fix". Never call these on a secure frame from the OnUpdate timer.
 - **`SendChatMessage` to `SAY`/`YELL` is blocked from automated code**
   (`ADDON_ACTION_BLOCKED` → "protected function UNKNOWN()"). Those channels need
   a hardware event (key/click). `PARTY`/`RAID`/`RAID_WARNING` are fine from the
@@ -152,11 +173,23 @@ in-game:
 ### Linting
 
 `luacheck` runs in CI on every push/PR (`.github/workflows/lint.yml`) using the
-root `.luacheckrc`. Run it locally before pushing if you have it:
+root `.luacheckrc`. **Run it locally before pushing** — it has caught real
+undeclared-global bugs that slipped past in-game testing (the game has the API;
+the linter doesn't, until it's declared).
 
-```sh
-luacheck .
+There's no native Lua/luacheck on Windows, so the local lint runs through Docker.
+`tools/lint.ps1` wraps it (matches CI; first run pulls a small image, then it's
+cached):
+
+```powershell
+tools\lint.ps1                 # whole repo, same as CI
+tools\lint.ps1 HealerManaBars.lua
 ```
+
+It exits non-zero on warnings/errors. If you have a native `luacheck` (e.g. the
+standalone `luacheck.exe` from the lunarmodules/luacheck releases, or via
+luarocks), `luacheck .` from the repo root works too. The `tools/` dir is
+dev-only and excluded from the release zip (`.pkgmeta`).
 
 The config declares the WoW API globals the addon uses, so undefined-global
 warnings mean a **real typo** — fix them, don't silence them. When you call a

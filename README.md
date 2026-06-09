@@ -17,6 +17,10 @@ know whether the healing core has the mana to push — or needs a breather.
   under **Innervate**, **Mana Spring Totem**, or **Mana Tide Totem**, or who is
   **drinking**. (Mana Tide applies no buff aura, so it's read from the combat
   log — which only sees healers near you.)
+- **Click to interact.** Left-click a healer's bar to **target** them; **right-click
+  casts a spell of your choice** on them (defaults to **Innervate** for druids,
+  blank otherwise). Configure or disable both in the *Interaction* options. (Bars
+  are clickable while locked; unlock to drag.)
 - **Low-mana alerts.** When the overall healer mana drops below a configurable
   threshold you can:
   - blink the overall bar red,
@@ -51,6 +55,25 @@ Open the options with **`/hmb`** (or via *Interface → AddOns → Healer Mana B
 | `/hmb up` / `/hmb down` | growth direction |
 | `/hmb reset` | reset position to the top-left |
 | `/hmb status` | print diagnostics (handy for bug reports) |
+
+## Interacting with the bars
+
+While the cluster is **locked** (normal play), each individual healer bar is a
+clickable unit button:
+
+- **Left-click** — target that healer.
+- **Right-click** — cast your configured spell on that healer.
+
+Set the right-click spell under the **Interaction** options — any spell name
+(e.g. *Innervate* for druids, *Power Infusion* for priests). It defaults to
+*Innervate* for druids and is blank for everyone else; leave it blank to disable
+right-click. Click-to-target can also be turned off there.
+
+Unlock (`/hmb unlock`) to drag the cluster; clicking is disabled while unlocked
+so the drag works. The overall and test-mode bars don't map to a real unit, so
+clicking them does nothing. Targeting and casting are protected actions that the
+client won't let an addon change mid-combat, so if your roster shifts during a
+fight the click mapping re-syncs the moment you leave combat.
 
 ## Healer detection
 

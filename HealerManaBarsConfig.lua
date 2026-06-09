@@ -74,6 +74,32 @@ local function MakeCheckbox(parent, yRef, label, dbKey, onChange)
     return cb
 end
 
+-- Single-line text input. Commits on Enter or focus-loss, trims whitespace, and
+-- Escape reverts to the stored value. Stores the string under dbKey.
+local function MakeEditBox(parent, yRef, label, dbKey, onChange)
+    MakeLabel(parent, yRef, label)
+    local eb = CreateFrame("EditBox", "HMBEdit_" .. dbKey, parent, "InputBoxTemplate")
+    eb:SetPoint("TOPLEFT", parent, "TOPLEFT", 8, yRef.v)
+    eb:SetSize(220, 20)
+    eb:SetAutoFocus(false)
+    eb:SetText(HealerManaBarsDB[dbKey] or "")
+    local function commit()
+        local v = (eb:GetText() or ""):gsub("^%s+", ""):gsub("%s+$", "")
+        HealerManaBarsDB[dbKey] = v
+        eb:SetText(v)
+        eb:ClearFocus()
+        if onChange then onChange(v) end
+        Rebuild()
+    end
+    eb:SetScript("OnEnterPressed", commit)
+    eb:SetScript("OnEditFocusLost", commit)
+    eb:SetScript("OnEscapePressed", function()
+        eb:SetText(HealerManaBarsDB[dbKey] or ""); eb:ClearFocus()
+    end)
+    yRef.v = yRef.v - 30
+    return eb
+end
+
 local function MakeRadioGroup(parent, yRef, options, currentKey, onSelect)
     local radios = {}
     for _, opt in ipairs(options) do
@@ -250,6 +276,15 @@ local function BuildPanel(p)
         "When solo (no raid roles), a single bar shows your own mana.")
     MakeCheckbox(child, y, "Locked (uncheck to drag the bars)", "locked",
         function() ApplyLock() end)
+
+    -- Interaction -------------------------------------------------------------
+    MakeHeader(child, y, "Interaction", PANEL_W)
+    MakeCheckbox(child, y, "Click a healer's bar to target them", "clickToTarget")
+    MakeEditBox(child, y, "Right-click spell (cast on that healer; blank = off)", "rightClickSpell")
+    MakeDesc(child, y, "Type a spell name to cast on a healer with right-click — e.g. " ..
+        "Innervate (druids), Power Infusion (priests). Leave blank to disable. Bars are " ..
+        "clickable only while locked; the overall bar and test-mode simulated healers " ..
+        "aren't real units, so clicking them does nothing.")
 
     -- Visibility --------------------------------------------------------------
     MakeHeader(child, y, "Visibility", PANEL_W)
