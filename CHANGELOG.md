@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.14
+
+### Added
+- **The right-click spell field now previews the spell's icon** as you type. The
+  icon (and the spell's name) appears when the entry resolves to a spell you can
+  cast; otherwise it shows "not found" — so you get instant confirmation the name
+  is right.
+
 ## 1.0.13
 
 ### Added

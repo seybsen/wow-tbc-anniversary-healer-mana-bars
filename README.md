@@ -70,9 +70,11 @@ clickable unit button:
 - **Right-click** — cast your configured spell on that healer.
 
 Set the right-click spell under the **Interaction** options — any spell name
-(e.g. *Innervate* for druids, *Power Infusion* for priests). It defaults to
-*Innervate* for druids and is blank for everyone else; leave it blank to disable
-right-click. Click-to-target can also be turned off there.
+(e.g. *Innervate* for druids, *Power Infusion* for priests). The spell's icon
+appears next to the field when the name resolves to a spell you can cast, so you
+know it's correct. It defaults to *Innervate* for druids and is blank for
+everyone else; leave it blank to disable right-click. Click-to-target can also be
+turned off there.
 
 Unlock (`/hmb unlock`) to drag the cluster; clicking is disabled while unlocked
 so the drag works. The overall and test-mode bars don't map to a real unit, so

@@ -76,26 +76,61 @@ end
 
 -- Single-line text input. Commits on Enter or focus-loss, trims whitespace, and
 -- Escape reverts to the stored value. Stores the string under dbKey.
-local function MakeEditBox(parent, yRef, label, dbKey, onChange)
+-- opts.spellIcon = true adds a live spell preview to the right: GetSpellInfo by
+-- name is spellbook-scoped, so an icon appearing confirms it's a spell you can
+-- actually cast (a typo / unknown spell shows "not found" instead).
+local function MakeEditBox(parent, yRef, label, dbKey, opts)
+    opts = opts or {}
     MakeLabel(parent, yRef, label)
     local eb = CreateFrame("EditBox", "HMBEdit_" .. dbKey, parent, "InputBoxTemplate")
     eb:SetPoint("TOPLEFT", parent, "TOPLEFT", 8, yRef.v)
     eb:SetSize(220, 20)
     eb:SetAutoFocus(false)
     eb:SetText(HealerManaBarsDB[dbKey] or "")
+
+    local icon, status
+    if opts.spellIcon then
+        icon = parent:CreateTexture(nil, "OVERLAY")
+        icon:SetSize(18, 18)
+        icon:SetPoint("LEFT", eb, "RIGHT", 8, 0)
+        icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)   -- trim the default icon border
+        status = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        status:SetPoint("LEFT", icon, "RIGHT", 6, 0)
+    end
+
+    -- Resolve the typed spell and reflect it in the icon/status (live, no save).
+    local function refreshIcon()
+        if not icon then return end
+        local txt = (eb:GetText() or ""):gsub("^%s+", ""):gsub("%s+$", "")
+        if txt == "" then
+            icon:Hide(); status:SetText("")
+            return
+        end
+        local name, _, tex = GetSpellInfo(txt)
+        if tex then
+            icon:SetTexture(tex); icon:Show()
+            status:SetText("|cff66cc66" .. (name or txt) .. "|r")
+        else
+            icon:Hide()
+            status:SetText("|cffff6666not found|r")
+        end
+    end
+
     local function commit()
         local v = (eb:GetText() or ""):gsub("^%s+", ""):gsub("%s+$", "")
         HealerManaBarsDB[dbKey] = v
         eb:SetText(v)
         eb:ClearFocus()
-        if onChange then onChange(v) end
+        refreshIcon()
         Rebuild()
     end
     eb:SetScript("OnEnterPressed", commit)
     eb:SetScript("OnEditFocusLost", commit)
     eb:SetScript("OnEscapePressed", function()
-        eb:SetText(HealerManaBarsDB[dbKey] or ""); eb:ClearFocus()
+        eb:SetText(HealerManaBarsDB[dbKey] or ""); eb:ClearFocus(); refreshIcon()
     end)
+    if icon then eb:SetScript("OnTextChanged", refreshIcon) end
+    refreshIcon()
     yRef.v = yRef.v - 30
     return eb
 end
@@ -257,9 +292,11 @@ local function BuildGeneralTab(child)
 
     MakeHeader(child, y, "Interaction", PANEL_W)
     MakeCheckbox(child, y, "Click a healer's bar to target them", "clickToTarget")
-    MakeEditBox(child, y, "Right-click spell (cast on that healer; blank = off)", "rightClickSpell")
+    MakeEditBox(child, y, "Right-click spell (cast on that healer; blank = off)", "rightClickSpell",
+        { spellIcon = true })
     MakeDesc(child, y, "Type a spell name to cast on a healer with right-click — e.g. " ..
-        "Innervate (druids), Power Infusion (priests). Leave blank to disable. Bars are " ..
+        "Innervate (druids), Power Infusion (priests). Its icon appears when the name is " ..
+        "one you can cast (\"not found\" otherwise). Leave blank to disable. Bars are " ..
         "clickable only while locked; the overall bar and test-mode simulated healers " ..
         "aren't real units, so clicking them does nothing.")
 

@@ -135,7 +135,9 @@ OnUpdate (every frame):
   — it's `nil` in `DEFAULTS` and seeded once at login (Innervate for druids, `""`
   otherwise); `nil` means "never seeded", so a user-cleared `""` is not re-seeded.
   `ComputeInnervate` resolves Innervate's localized name (spell ID, locale-proof)
-  for that default.
+  for that default. The panel's spell field previews the resolved icon via
+  `MakeEditBox(..., { spellIcon = true })` — `GetSpellInfo(name)` is spellbook-
+  scoped, so an icon = a spell the player can actually cast.
 
 ## WoW API gotchas (important — these caused real bugs)
 
