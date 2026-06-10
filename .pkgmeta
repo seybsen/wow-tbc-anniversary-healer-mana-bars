@@ -8,7 +8,12 @@ package-as: HealerManaBars
 enable-nolib-creation: no
 
 # Use the hand-written changelog rather than an auto-generated commit list.
-manual-changelog: CHANGELOG.md
+# Declare markup-type so CurseForge/Wago render it as Markdown; the shorthand
+# form (manual-changelog: CHANGELOG.md) defaults to plain text, which CF does
+# not display as a formatted changelog.
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
 
 # Keep development-only files out of the packaged zip.
 # (media/ holds the CurseForge listing art and must not ship inside the addon.

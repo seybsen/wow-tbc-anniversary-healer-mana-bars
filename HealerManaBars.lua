@@ -151,7 +151,7 @@ local DEFAULTS = {
 
     -- low-mana alerts
     blink           = true,
-    lowThreshold    = 30,                     -- percent
+    lowThreshold    = 15,                     -- percent
     warn            = true,                   -- local raid-warning text + sound
     announce        = false,                  -- broadcast to a chat channel
     announceChannel = "AUTO",                 -- AUTO|SAY|PARTY|RAID|YELL|RAID_WARNING
@@ -637,7 +637,7 @@ end
 local function FireAnnounce()
     if not DB.announce then return end
     local channel = ResolveChannel()
-    local msg = "Healer mana below " .. (DB.lowThreshold or 30) .. "%"
+    local msg = "Healer mana below " .. (DB.lowThreshold or DEFAULTS.lowThreshold) .. "%"
     if DB.testMode then
         DEFAULT_CHAT_FRAME:AddMessage("|cff66ccffHealerManaBars|r [test → " .. (channel or "—") .. "]: " .. msg)
         return
@@ -674,7 +674,7 @@ local function RefreshValues(entries, healers)
             bar:SetValue(pct)
             g_overallBar = bar
 
-            local threshold = DB.lowThreshold or 30
+            local threshold = DB.lowThreshold or DEFAULTS.lowThreshold
             local low = (healerCount > 0) and (pct * 100 < threshold)
 
             -- Alert once on the downward crossing, and only re-arm after mana

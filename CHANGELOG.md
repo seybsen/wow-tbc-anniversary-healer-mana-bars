@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.15
+
+### Changed
+- **The low-mana alert threshold now defaults to 15%** (was 30%). This drives the
+  blink, the local raid-warning, and the chat announce. Existing setups keep
+  their saved value — only fresh installs (or a reset DB) get the new default.
+
 ## 1.0.14
 
 ### Added

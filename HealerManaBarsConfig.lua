@@ -401,7 +401,7 @@ local function BuildAlertsTab(child)
     MakeCheckbox(child, y, "Blink the overall bar red when below threshold", "blink")
     MakeCheckbox(child, y, "Local warning (raid-warning text + sound, only you)", "warn")
     MakeCheckbox(child, y, "Announce to chat when below threshold", "announce")
-    MakeDesc(child, y, "Sends \"Healer mana below " .. (HealerManaBarsDB.lowThreshold or 30) ..
+    MakeDesc(child, y, "Sends \"Healer mana below " .. (HealerManaBarsDB.lowThreshold or ns.DEFAULTS.lowThreshold) ..
         "%\" once when overall healer mana drops below the threshold (re-arms after it " ..
         "recovers). In test mode it only prints locally, never to a public channel.")
     MakeLabel(child, y, "Announce channel")
