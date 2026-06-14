@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.16
+
+### Changed
+- **Internal restructuring only — no behaviour changes.** The runtime is split
+  from one large file into focused modules (`modules/Core·Auras·Roster·Bars·
+  Alerts·Slash.lua` plus the display engine). Settings, commands, and visuals
+  are unchanged; saved variables carry over as-is.
+
 ## 1.0.15
 
 ### Changed

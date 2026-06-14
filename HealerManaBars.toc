@@ -2,7 +2,7 @@
 ## Title: |cff66ccffHealer Mana Bars|r
 ## Notes: Individual + overall mana bars for raid healers, with regen/drinking indicators and low-mana alerts. /hmb
 ## Author: Seybsen
-## Version: 1.0.15
+## Version: 1.0.16
 ## SavedVariables: HealerManaBarsDB
 ## IconTexture: Interface\Icons\Spell_Holy_PowerInfusion
 ## OptionalDeps: LibSharedMedia-3.0, ElvUI
@@ -12,4 +12,10 @@
 ## X-Wago-ID: XKqAVbKy
 
 HealerManaBarsConfig.lua
+modules\Core.lua
+modules\Auras.lua
+modules\Roster.lua
+modules\Bars.lua
+modules\Alerts.lua
 HealerManaBars.lua
+modules\Slash.lua

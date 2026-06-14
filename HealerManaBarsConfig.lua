@@ -3,9 +3,9 @@
 -- ----------------------------------------------------------------------------
 -- Builds the options panel (Interface → AddOns) and edits HealerManaBarsDB
 -- live, calling the ns.* hooks the runtime exposes to apply changes. The
--- saved-variable defaults and ns.EnsureDefaults live in the runtime
--- (HealerManaBars.lua) so the DB is seeded even if this panel ever fails to
--- load; everything here runs at panel-open time, after the runtime is loaded.
+-- saved-variable defaults and ns.EnsureDefaults live in the runtime (Core.lua)
+-- so the DB is seeded even if this panel ever fails to load; everything here
+-- runs at panel-open time, after the runtime is loaded.
 -- ============================================================================
 
 local ADDON_NAME, ns = ...

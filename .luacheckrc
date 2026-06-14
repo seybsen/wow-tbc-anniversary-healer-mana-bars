@@ -9,10 +9,9 @@
 std = "lua51"
 max_line_length = false   -- the source intentionally uses long descriptive lines
 
--- Don't lint generated/duplicate/vendored trees.
+-- Don't lint generated/vendored trees.
 exclude_files = {
     ".release/",
-    "HealerManaBars/",   -- untracked packaging staging copy (byte-identical)
     ".luarocks/",        -- luacheck's own install tree (CI + local)
     ".lua/",             -- leafo lua-setup dir in CI
 }
@@ -20,7 +19,7 @@ exclude_files = {
 -- Globals this addon defines or writes fields on. WoW tables we mutate
 -- (SlashCmdList[...], ColorPickerFrame.func, ...) must be writable, so they
 -- live here rather than in read_globals (which would flag "read-only field").
--- The two files now share state through the private addon table (`local _, ns =
+-- The addon's files share state through the private addon table (`local _, ns =
 -- ...`), not the global namespace, so the only global the addon defines is the
 -- saved variable plus the slash bindings / WoW tables it writes fields on.
 globals = {

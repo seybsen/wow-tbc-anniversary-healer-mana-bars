@@ -15,8 +15,8 @@ making changes.
 > | If you change… | Update |
 > |---|---|
 > | A user-visible behaviour/feature | `README.md` (features, detection, usage) and this `AGENTS.md` |
-> | A setting/default | `DEFAULTS` (runtime — single source), the panel widget + its `MakeDesc` text, `README.md`, this file |
-> | A slash command | `README.md` command table **and** the `/hmb help` text in `HealerManaBars.lua` |
+> | A setting/default | `DEFAULTS` in `Core.lua` (single source), the panel widget + its `MakeDesc` text, `README.md`, this file |
+> | A slash command | `README.md` command table **and** the `/hmb help` text in `Slash.lua` |
 > | Anything user-facing, for a release | add a `## X.Y.Z` section to `CHANGELOG.md` and bump `## Version` in the `.toc` (see Release process) |
 > | Architecture / flow / API gotchas | this `AGENTS.md` |
 >
@@ -43,9 +43,15 @@ regen/drinking indicators and configurable low-mana alerts.
 
 | File | Role |
 |---|---|
-| `HealerManaBars.toc` | Load manifest. `## Version` lives here — bump on release. Loads config **before** runtime. |
+| `HealerManaBars.toc` | Load manifest. `## Version` lives here — bump on release. Loads config **before** the runtime modules. |
 | `HealerManaBarsConfig.lua` | The **options panel** (Interface → AddOns). Loaded first; runs at panel-open time. |
-| `HealerManaBars.lua` | Runtime: saved-var **defaults** (`DEFAULTS` + `ns.EnsureDefaults`), roster → bars, value refresh, alerts, slash command, events. |
+| `modules/Core.lua` | Saved-var **defaults** (`DEFAULTS` + `ns.EnsureDefaults`/`ns.ApplyDefaults`), media resolvers, colour helpers, `ns.Print`. |
+| `modules/Auras.lua` | Regen/drink aura name sets, the combat-log **Mana Tide** tracker, Innervate right-click default. All spell-ID based. |
+| `modules/Roster.lua` | Roster scan → ordered entries (`ns.BuildEntries`), healer detection, healer signature, **test-mode** fake roster. |
+| `modules/Bars.lua` | Bar **pool** (`ns.bars`/`ns.AcquireBar`), secure click overlay, styling, per-element layout, status icons, cluster stacking. |
+| `modules/Alerts.lua` | Low-mana local warning (`ns.FireLocalAlert`) and chat announce (`ns.FireAnnounce`) incl. the SAY/YELL guard. |
+| `HealerManaBars.lua` | The **engine**: anchor + visibility, `Rebuild`, `RefreshValues`, low-mana latch, OnUpdate loop, events, login init. |
+| `modules/Slash.lua` | The `/hmb` slash command (incl. the `/hmb help` text). |
 | `CHANGELOG.md` | Hand-written, shipped in releases (`manual-changelog` in `.pkgmeta`). Keep in sync with `## Version`. |
 | `.pkgmeta` | BigWigsMods packager config (what to ship/ignore). |
 | `.luacheckrc` | luacheck (linter) config: declares the WoW API globals so only real issues are reported. |
@@ -55,23 +61,26 @@ regen/drinking indicators and configurable low-mana alerts.
 | `tools/` | Dev-only helpers (`lint.ps1` — Docker-wrapped luacheck). **Not shipped** in the addon zip. |
 | `README.md` | User-facing docs / CurseForge description. |
 
-> **Untracked `HealerManaBars/` subfolder:** a byte-identical packaging staging
-> copy. It is **not** loaded by the game and **not** tracked by git. Never edit
-> it and never `git add` it — always edit the root files and add files
-> explicitly (avoid `git add .`).
-
 ## Architecture & data flow
 
-The two files share the **private addon table** (`local _, ns = ...`, passed to
+All files share the **private addon table** (`local _, ns = ...`, passed to
 every file of the addon), not the global namespace. The only global the addon
-defines is the saved variable `HealerManaBarsDB`. Via `ns`:
+defines is the saved variable `HealerManaBarsDB`. Conventions:
 
-- Runtime → panel: `ns.EnsureDefaults`, `ns.DEFAULTS`, the live-apply hooks
-  `ns.Rebuild`, `ns.ApplyLock`, `ns.ApplyPosition`, and media helpers
-  `ns.TextureList/Path`, `ns.FontList/Path`.
-- Panel → runtime: `ns.OpenConfig` (called by `/hmb`).
-- All cross-file calls run at *runtime* (login / panel-open), so the second-
-  loaded file's `ns.*` are always set by then regardless of `.toc` load order.
+- **Module exports are functions on `ns`** (`ns.BuildEntries`, `ns.StyleBar`,
+  `ns.FireAnnounce`, …); module-private state stays file-local (e.g. the Mana
+  Tide GUID map never leaves `Auras.lua` — the engine asks `ns.UnitTideIcon`).
+- **Shared state lives on `ns`**: `ns.db` (the saved-var alias, set at login by
+  `ns.ApplyDefaults`), `ns.anchor` (the movable container), `ns.bars` (the bar
+  pool). It is **read at call time, never captured at file scope**, so nothing
+  depends on `.toc` load order.
+- All cross-file calls run at *runtime* (login / events / panel-open), never at
+  file-load time — so each file's `ns.*` are always set by then regardless of
+  `.toc` load order.
+- Panel ↔ runtime surface: the panel reads `ns.EnsureDefaults`, `ns.DEFAULTS`,
+  the live-apply hooks `ns.Rebuild`/`ns.ApplyLock`, and the media helpers
+  `ns.TextureList/Path`, `ns.FontList/Path`; the runtime calls `ns.OpenConfig`
+  (from `/hmb`).
 
 Runtime loop:
 
@@ -92,7 +101,7 @@ OnUpdate (every frame):
   and `healers` (everyone aggregated, even when individual bars are hidden).
 - **`RefreshValues()`** aggregates mana, drives the overall bar, the low-mana
   latch (`g_lowActive`, with +5% hysteresis), per-bar colour/icons.
-- Bars are **pooled** (`g_bars`, `AcquireBar`) and re-styled each rebuild, so
+- Bars are **pooled** (`ns.bars`, `ns.AcquireBar` in `Bars.lua`) and re-styled each rebuild, so
   config changes apply live without recreating frames. Element placement is data-
   driven: `AcquireBar` only *creates* the name/value font strings; their anchors
   are (re)applied every rebuild in `LayoutBarElements` (`nameSide`/`valueSide`)
@@ -120,13 +129,14 @@ OnUpdate (every frame):
   if another addon provides them (`LibStub`, `ElvUI[1]`). Built-in texture/font
   fallbacks exist. Do not embed libs; `.pkgmeta` has `enable-nolib-creation: no`.
 - **`DEFAULTS` is the single source of truth** for saved-var defaults and lives
-  in the **runtime** (not the panel), so the DB is fully seeded even if the panel
+  in **`Core.lua`** (not the panel), so the DB is fully seeded even if the panel
   file fails to load. `ns.EnsureDefaults` fills missing keys (and migrates the
   pre-1.0 `blinkThreshold`). There is no second fallback copy to keep in sync.
 - **Each bar carries a secure click overlay** (`bar.secure`, a
   `SecureActionButtonTemplate` button covering the bar) for click-to-target /
-  right-click-Innervate. `EnsureSecure` creates it; `UpdateSecure` re-points it
-  each rebuild (`type1="target"`/`unit`; druids also `type2="spell"`/`spell2`).
+  the right-click spell. `EnsureSecure` creates it; `UpdateSecure` re-points it
+  each rebuild (`type1="target"`/`unit`; plus `type2="spell"`/`spell2` when a
+  right-click spell is configured).
   Overlay mouse is on only while **locked**, so unlocked = draggable. Overall and
   test bars have no real unit, so their attributes are cleared (clicks no-op).
   Two settings drive it: `clickToTarget` (master left-click toggle) and
@@ -167,7 +177,7 @@ OnUpdate (every frame):
 - **Slider/dropdown sub-widgets** (Low/High labels) aren't exposed as parentKeys
   on every build — fall back to `_G[name.."Low"]`. Same defensive pattern for
   radio button text.
-- Adding a setting touches **three** places: `DEFAULTS` (runtime), a widget in
+- Adding a setting touches **three** places: `DEFAULTS` (`Core.lua`), a widget in
   the relevant `Build<Tab>Tab`, and the consuming logic.
 
 ## Testing (no automated harness — it's in-client)
@@ -175,7 +185,8 @@ OnUpdate (every frame):
 There is no unit-test framework (WoW Lua can't run standalone here). Verify
 in-game:
 
-1. Drop the folder in `Interface/AddOns/`, launch, `/reload` after edits.
+1. Drop the folder in `Interface/AddOns/`, launch, `/reload` after edits
+   (a `.toc` change — new/renamed files — needs a full client restart).
 2. `/hmb test` — fake-healer roster incl. your live character, for tuning.
 3. `/hmb status` — diagnostics (entries, shown bars, pool size, anchor pos).
    Always ask for this output on bug reports.
@@ -228,8 +239,8 @@ Releases are tag-driven via the BigWigsMods packager (GitHub Action).
    git push origin vX.Y.Z      # or: git push origin main --follow-tags
    ```
 5. The Action packages the zip (excluding `.git*`, `.github`, `.pkgmeta`,
-   `media`, `.luacheckrc`, `AGENTS.md`, `CLAUDE.md`), creates the GitHub
-   Release, and uploads to each store whose secret is set.
+   `media`, `tools`, `.luacheckrc`, `AGENTS.md`, `CLAUDE.md`), creates the
+   GitHub Release, and uploads to each store whose secret is set.
 
 The Action triggers on **any** tag (`tags: "**"`), so don't push throwaway tags.
 
