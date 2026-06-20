@@ -80,7 +80,7 @@ local function MakeFakeHealers()
     -- player (your name, mana and buffs); Shoosto is flagged dead to demo the
     -- grey-out / hide-dead option.
     local roster = {
-        { name = "Zlarx",    class = "DRUID",   max = 3900,
+        { name = "Zlarx",    class = "DRUID",   max = 3900, form = "cat",     -- demo the shifted-druid marking
           regenIcon = "Interface\\Icons\\Spell_Nature_Lightning" },          -- Innervate
         { name = "Cyllino",  class = "SHAMAN",  max = 4100,
           regenIcon = "Interface\\Icons\\Spell_Nature_ManaRegenTotem" }, -- Mana Spring
