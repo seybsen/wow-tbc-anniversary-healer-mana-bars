@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.17
+
+### Added
+- **Shapeshift-aware druid bars.** A raid druid in Bear or Cat form no longer
+  shows a misleading 0% mana bar. Their mana isn't reported to other players, so
+  the bar is greyed with a form icon and excluded from the overall average (they
+  stay counted as a present healer). New **Mark shapeshifted druids** option
+  (General tab, on by default) controls this. Your own druid still shows real
+  mana while shifted.
+
 ## 1.0.16
 
 ### Changed

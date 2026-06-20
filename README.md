@@ -30,6 +30,12 @@ know whether the healing core has the mana to push — or needs a breather.
     can't use them.)
 - **Dead healers** can be hidden, or greyed out and sunk to the bottom — and are
   kept out of the overall average either way.
+- **Shapeshift-aware.** A raid druid in **Bear** or **Cat** form doesn't report
+  mana to other players (the game only sends their active Rage/Energy), so rather
+  than show a misleading 0% their bar is greyed with a form icon and left out of
+  the overall average. They're still counted as a present healer. Toggle: **Mark
+  shapeshifted druids** (General tab, on by default). Your own druid always shows
+  real mana while shifted.
 - **Fully configurable look.** Bar colour (class / static / green→red gradient),
   width, height, spacing, grow direction (up/down), bar texture, font & size, and
   overall / background opacity. Names are always class-coloured.

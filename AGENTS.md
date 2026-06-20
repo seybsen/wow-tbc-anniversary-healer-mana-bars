@@ -112,8 +112,16 @@ OnUpdate (every frame):
 
 ### Key design points / conventions
 
-- **Mana via power index 0** (`Enum.PowerType.Mana`), so a shapeshifted druid
-  still reports real mana.
+- **Mana via power index 0** (`Enum.PowerType.Mana`). This returns real mana for
+  **your own** shifted druid, but the server only replicates a *remote* unit's
+  **active** power, so a remote druid in Bear/Cat (active power Rage/Energy)
+  reports mana 0 — not their real mana. Those druids are detected via
+  `UnitPowerType` (Rage→Bear, Energy→Cat) by `ns.EntryShiftedForm` (`Roster.lua`)
+  and, when `markShifted` is on (default), drawn greyed with a form icon and
+  excluded from the overall average instead of showing a misleading 0%. They
+  stay counted in the `Healers (N)` label (`displayCount`) but not in the average
+  or the low-mana alert (`readableCount`). Moonkin/Tree/caster/travel keep mana
+  as their active power and need no special handling.
 - **Healer detection = assigned raid role only** (`UnitGroupRolesAssigned ==
   "HEALER"`). Class-guessing is intentionally avoided. **Exception:** when
   ungrouped (`not IsInGroup()`), the player is treated as a healer (no roles
