@@ -57,15 +57,24 @@ local function RefreshValues(entries, healers)
     local bars = ns.bars
 
     -- Aggregate over every healer for the overall bar — including ones not drawn
-    -- (so "overall only" still reflects the whole group). A corpse isn't "low on
-    -- mana", just unavailable, so the dead are left out of the average.
-    local sumCur, sumMax, healerCount = 0, 0, 0
+    -- (so "overall only" still reflects the whole group). Two counters:
+    -- displayCount drives the "Healers (N)" label (every present, alive healer,
+    -- incl. shifted druids); readableCount + the sums drive the average and the
+    -- low-mana alert (only healers whose mana we can actually read — not shifted,
+    -- not dead, max>0). A corpse isn't "low on mana", just unavailable, and a
+    -- remote shifted druid's mana isn't reported at all, so both are left out of
+    -- the average.
+    local sumCur, sumMax, readableCount, displayCount = 0, 0, 0, 0
     for _, e in ipairs(healers) do
         local cur, max = UnitMana(e)
         e._cur, e._max = cur, max
-        e._dead = IsEntryDead(e)
-        if not e._dead and max > 0 then
-            sumCur, sumMax, healerCount = sumCur + cur, sumMax + max, healerCount + 1
+        e._dead    = IsEntryDead(e)
+        e._shifted = (DB.markShifted ~= false) and ns.EntryShiftedForm(e) or nil
+        if not e._dead then
+            displayCount = displayCount + 1
+            if not e._shifted and max > 0 then
+                sumCur, sumMax, readableCount = sumCur + cur, sumMax + max, readableCount + 1
+            end
         end
     end
 
@@ -81,7 +90,7 @@ local function RefreshValues(entries, healers)
             g_overallBar = bar
 
             local threshold = DB.lowThreshold or ns.DEFAULTS.lowThreshold
-            local low = (healerCount > 0) and (pct * 100 < threshold)
+            local low = (readableCount > 0) and (pct * 100 < threshold)
 
             -- Alert once on the downward crossing, and only re-arm after mana
             -- climbs a margin back above the line, so a value sitting right at
@@ -105,7 +114,7 @@ local function RefreshValues(entries, healers)
                     bar:SetStatusBarColor(unpack(DB.overallStaticColor))
                 end
             end
-            bar.label:SetText(string.format("|cffffffffHealers (%d)|r", healerCount))
+            bar.label:SetText(string.format("|cffffffffHealers (%d)|r", displayCount))
             bar.value:SetText(string.format("%d%%", pct * 100 + 0.5))
             ns.SetBarIcons(bar, EMPTY_ICONS)
         elseif e._dead then
@@ -117,6 +126,18 @@ local function RefreshValues(entries, healers)
             bar.label:SetText("|cff808080" .. (e.name or "?") .. "|r")
             bar.value:SetText("|cff808080dead|r")
             ns.SetBarIcons(bar, EMPTY_ICONS)
+        elseif e._shifted then
+            -- Remote shifted druid: mana not readable (the server only sends their
+            -- active Rage/Energy). Grey it, show an em-dash and the form icon; it's
+            -- excluded from the average above so it can't read as "out of mana".
+            bar:SetValue(0)
+            bar:SetAlpha(0.6)
+            bar:SetStatusBarColor(0.35, 0.35, 0.35)
+            bar.label:SetText("|cff808080" .. (e.name or "?") .. "|r")
+            bar.value:SetText("|cff808080—|r")
+            wipe(g_iconScratch)
+            g_iconScratch[1] = ns.ShiftedFormIcon(e._shifted)
+            ns.SetBarIcons(bar, g_iconScratch)
         else
             bar:SetAlpha(1)   -- this pooled bar may have shown a corpse last pass
             local cur, max = e._cur or 0, e._max or 0
