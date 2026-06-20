@@ -284,6 +284,11 @@ local function BuildGeneralTab(child)
     MakeCheckbox(child, y, "Show overall (aggregate) bar", "showOverall")
     MakeCheckbox(child, y, "Only the overall bar (hide individual healers)", "overallOnly")
     MakeCheckbox(child, y, "Hide dead healers (otherwise grey them out)", "hideDead")
+    MakeCheckbox(child, y, "Mark shapeshifted druids (grey out, show form icon, exclude from overall)", "markShifted")
+    MakeDesc(child, y, "A druid in Bear or Cat form doesn't report mana for other " ..
+        "raid members (the game only sends their active Rage/Energy). Rather than " ..
+        "show a misleading 0%, their bar is greyed with a form icon and left out " ..
+        "of the overall average. Your own druid always reports real mana.")
     MakeDesc(child, y, "Healers are detected via assigned raid role (right-click a unit " ..
         "frame → Role → Healer). Players without the Healer role are not shown. " ..
         "When solo (no raid roles), a single bar shows your own mana.")

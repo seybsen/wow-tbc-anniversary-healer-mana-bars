@@ -21,6 +21,7 @@ local DEFAULTS = {
     showOverall  = true,
     overallOnly  = false,      -- show only the overall bar, no individual healers
     hideDead     = false,      -- hide dead healers; when off they're greyed out
+    markShifted  = true,       -- grey shifted druids (Bear/Cat), show form icon, exclude from overall
     growth       = "down",     -- "down" | "up"
     nameSide     = "left",      -- name text edge: "left" | "right"
     valueSide    = "right",     -- % readout: "left" | "right" | "hidden"
