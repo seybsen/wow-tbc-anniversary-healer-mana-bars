@@ -166,6 +166,14 @@ OnUpdate (every frame):
   Consequence: if the roster reorders mid-fight, a bar's click target can briefly
   point at the old unit until combat ends — this is a hard engine limit, not a
   bug to "fix". Never call these on a secure frame from the OnUpdate timer.
+- **Show/Hide of the anchor and bars is also protected in combat**, because each
+  parents a secure click overlay — so showing/hiding an *ancestor* of a protected
+  frame is itself protected (the engine reports e.g. `HealerManaBarsAnchor:Show()`
+  is blocked). `Rebuild` therefore **early-returns while `InCombatLockdown()`** and
+  is re-run by `PLAYER_REGEN_ENABLED` at combat end. During combat the OnUpdate
+  polling path still calls `RefreshValues` on the existing bars (values + dead
+  grey-out update in place); only the structural re-sort/add/remove waits. Don't
+  reintroduce an unconditional `g_anchor:Show()`/`bar:Show()` in the Rebuild path.
 - **`SendChatMessage` to `SAY`/`YELL` is blocked from automated code**
   (`ADDON_ACTION_BLOCKED` → "protected function UNKNOWN()"). Those channels need
   a hardware event (key/click). `PARTY`/`RAID`/`RAID_WARNING` are fine from the

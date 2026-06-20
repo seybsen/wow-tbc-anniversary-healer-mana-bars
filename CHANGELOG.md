@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.18
+
+### Fixed
+- **No more "ADDON_ACTION_BLOCKED … HealerManaBarsAnchor:Show()" errors in
+  combat.** When a healer died, joined, or left mid-fight, the rebuild tried to
+  show/hide the bar cluster — a protected action while the bars carry secure
+  click overlays. The rebuild now defers until combat ends (mana values and the
+  dead grey-out still update live; only the re-sort waits). Pre-existing since
+  the click-to-target feature (1.0.12); not introduced by the 1.0.17 shapeshift
+  release.
+
 ## 1.0.17
 
 ### Added

@@ -188,6 +188,15 @@ end
 local function Rebuild()
     if not g_anchor then return end
 
+    -- The anchor (and every bar) parents a secure click overlay, which makes
+    -- Show/Hide on them a *protected* action — blocked in combat (the engine
+    -- reports it as "HealerManaBarsAnchor:Show()"). So defer the whole structural
+    -- rebuild until combat ends: PLAYER_REGEN_ENABLED calls Rebuild again, and
+    -- meanwhile OnUpdate's polling keeps refreshing values and greying the dead in
+    -- place on the existing bars. (Re-sorting waits for combat end — same engine
+    -- limit already noted for secure click targets.)
+    if InCombatLockdown() then return end
+
     -- Test mode and an unlocked frame always show (so it can be tuned and
     -- positioned); otherwise the per-context options decide. Hiding the anchor
     -- also hides every child bar and suspends its OnUpdate.
