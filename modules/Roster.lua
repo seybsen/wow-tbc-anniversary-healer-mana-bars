@@ -8,6 +8,34 @@
 
 local _, ns = ...
 
+-- Active power type IS replicated for other units (unlike a shifted druid's
+-- mana, power index 0, which is not). So a remote druid in Bear reports Rage and
+-- in Cat reports Energy — that's how we detect a mana-hidden form and which one.
+local RAGE   = (Enum and Enum.PowerType and Enum.PowerType.Rage)   or 1
+local ENERGY = (Enum and Enum.PowerType and Enum.PowerType.Energy) or 3
+
+local SHIFT_ICON = {
+    bear = "Interface\\Icons\\Ability_Racial_BearForm",
+    cat  = "Interface\\Icons\\Ability_Druid_CatForm",
+}
+
+-- "bear" / "cat" when this entry is a druid whose mana can't be read (shifted),
+-- else nil. Fakes carry an explicit form field for test mode.
+function ns.EntryShiftedForm(entry)
+    if entry.fake then return entry.fake.form end
+    if not entry.unit then return nil end
+    local _, class = UnitClass(entry.unit)
+    if class ~= "DRUID" then return nil end
+    local ptype = UnitPowerType(entry.unit)
+    if ptype == RAGE   then return "bear" end
+    if ptype == ENERGY then return "cat"  end
+    return nil
+end
+
+function ns.ShiftedFormIcon(form)
+    return SHIFT_ICON[form]
+end
+
 local function GroupUnits()
     local units = {}
     if IsInRaid() then
